@@ -125,6 +125,8 @@ void ghids(unsigned char add, unsigned char dat)
 	HAL_I2C_Mem_Write(&hi2c2,0x68<<1,add,I2C_MEMADD_SIZE_8BIT,i2c_write,1,1000); 
 }
 
+void scan_ADC(void);
+
 void ADC_Select_CH3 (void)
 {
 	ADC_ChannelConfTypeDef sConfig = {0};
@@ -346,6 +348,11 @@ uint8_t test=0;
     /* Calibration Error */
     Error_Handler();
   }
+	if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) != HAL_OK)
+  {
+    /* Calibration Error */
+    Error_Handler();
+  }
   while (1)
   {
     /* USER CODE END WHILE */
@@ -355,49 +362,9 @@ uint8_t test=0;
 		
 		if(tim20ct > 1000) {
 			tim20ct = 0;
-				
+			scan_ADC();	
 			//printf("1S\r\n");
-			HAL_ADC_Start(&hadc1);
-			HAL_ADC_PollForConversion(&hadc1, 100);
-			raw = HAL_ADC_GetValue(&hadc1);
-			HAL_ADC_Stop(&hadc1);
-			// Convert to string and print
-			printf("PA1-ADC1-IN2 :%d\r\n", raw);
 			
-			ADC_Select_CH17();
-		HAL_ADC_Start(&hadc2);
-		HAL_ADC_PollForConversion(&hadc2, 200);
-		raw = HAL_ADC_GetValue(&hadc2);
-		HAL_ADC_Stop(&hadc2);
-		// Convert to string and print
-		printf("PA4-ADC2-IN17 :%d\r\n", raw);
-		ADC_Select_CH13();
-		HAL_ADC_Start(&hadc2);
-		HAL_ADC_PollForConversion(&hadc2, 200);
-		raw = HAL_ADC_GetValue(&hadc2);
-		HAL_ADC_Stop(&hadc2);
-		// Convert to string and print
-		printf("PA5-ADC2-IN13 :%d\r\n", raw);
-		
-		
-		ADC_Select_CH3();
-		HAL_ADC_Start(&hadc2);
-		HAL_ADC_PollForConversion(&hadc2, 200);
-		raw = HAL_ADC_GetValue(&hadc2);
-		HAL_ADC_Stop(&hadc2);
-		// Convert to string and print
-		printf("PA6-ADC2-IN3 :%d\r\n", raw);
-		
-		
-		ADC_Select_CH4();
-		HAL_ADC_Start(&hadc2);
-		HAL_ADC_PollForConversion(&hadc2, 200);
-		raw = HAL_ADC_GetValue(&hadc2);
-		HAL_ADC_Stop(&hadc2);
-		// Convert to string and print
-		printf("PA7-ADC2-IN4 :%d\r\n", raw);
-		
-
 		}
 		if(tim20ct < 100) {
 			
@@ -1010,6 +977,69 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/**
+  * @brief EXTI line detection callbacks
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == GPS2PPS_Pin)
+  {
+		printf("GPS2PPS\r\n");
+  }
+	
+	if (GPIO_Pin == GPS1PPS_Pin)
+  {
+		printf("GPS1PPS\r\n");
+  }
+}
+
+void scan_ADC(void)
+	{
+		uint32_t raw;
+		
+	HAL_ADC_Start(&hadc1);
+			HAL_ADC_PollForConversion(&hadc1, 100);
+			raw = HAL_ADC_GetValue(&hadc1);
+			HAL_ADC_Stop(&hadc1);
+			// Convert to string and print
+			//printf("PA1-ADC1-IN2 :%d\r\n", raw);
+			
+			ADC_Select_CH17();
+		HAL_ADC_Start(&hadc2);
+		HAL_ADC_PollForConversion(&hadc2, 200);
+		raw = HAL_ADC_GetValue(&hadc2);
+		HAL_ADC_Stop(&hadc2);
+		// Convert to string and print
+		//printf("PA4-ADC2-IN17 :%d\r\n", raw);
+		ADC_Select_CH13();
+		HAL_ADC_Start(&hadc2);
+		HAL_ADC_PollForConversion(&hadc2, 200);
+		raw = HAL_ADC_GetValue(&hadc2);
+		HAL_ADC_Stop(&hadc2);
+		// Convert to string and print
+		//printf("PA5-ADC2-IN13 :%d\r\n", raw);
+		
+		
+		ADC_Select_CH3();
+		HAL_ADC_Start(&hadc2);
+		HAL_ADC_PollForConversion(&hadc2, 200);
+		raw = HAL_ADC_GetValue(&hadc2);
+		HAL_ADC_Stop(&hadc2);
+		// Convert to string and print
+		//printf("PA6-ADC2-IN3 :%d\r\n", raw);
+		
+		
+		ADC_Select_CH4();
+		HAL_ADC_Start(&hadc2);
+		HAL_ADC_PollForConversion(&hadc2, 200);
+		raw = HAL_ADC_GetValue(&hadc2);
+		HAL_ADC_Stop(&hadc2);
+		// Convert to string and print
+		//printf("PA7-ADC2-IN4 :%d\r\n", raw);
+	}
 #ifdef __GNUC__
   /* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
      set to 'Yes') calls __io_putchar() */

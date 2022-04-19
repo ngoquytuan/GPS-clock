@@ -84,7 +84,7 @@ void GPS2_UART_CallBack(void){
 		rx2_index = 0;
 		memset(rx2_buffer, 0, sizeof(rx2_buffer));
 	}
-	HAL_UART_Receive_IT(GPS1_USART, &rx2_data, 1);
+	HAL_UART_Receive_IT(GPS2_USART, &rx2_data, 1);
 	//huart1.pRxBuffPtr = (uint8_t *)rx_data;
   //huart1.RxXferCount = 1;
 }
