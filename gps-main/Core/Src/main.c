@@ -61,6 +61,7 @@ UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
+main_sst main_status;
 extern GPS_t GPS;
 uint8_t u1Timeout=0;
 uint8_t u2Timeout=0;
@@ -256,13 +257,13 @@ uint8_t test=0;
 	LCD_Gotoxy(0,0);
 	laythoigian();
 	if(time[3] == 6) LCD_Puts("Fri ");
-			else	if(time[3] == 5) LCD_Puts("Thu ");
-			else	if(time[3] == 4) LCD_Puts("Wed ");
-			else	if(time[3] == 3) LCD_Puts("Tue ");
-			else	if(time[3] == 2) LCD_Puts("Mon ");
-			else	if(time[3] == 7) LCD_Puts("Sat ");
-			else	if(time[3] == 1) LCD_Puts("Sun ");
-			else LCD_Puts("??? ");
+	else	if(time[3] == 5) LCD_Puts("Thu ");
+	else	if(time[3] == 4) LCD_Puts("Wed ");
+	else	if(time[3] == 3) LCD_Puts("Tue ");
+	else	if(time[3] == 2) LCD_Puts("Mon ");
+	else	if(time[3] == 7) LCD_Puts("Sat ");
+	else	if(time[3] == 1) LCD_Puts("Sun ");
+	else LCD_Puts("??? ");
 			
 	lcdprintf("%2d/%2d/20%2d %2d:%2d:%2d",time[4],time[5],time[6],time[2],time[1],time[0]);
 	/*ghids(0,0);
@@ -557,7 +558,7 @@ static void MX_ADC2_Init(void)
   hadc2.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   hadc2.Init.LowPowerAutoWait = DISABLE;
   hadc2.Init.ContinuousConvMode = ENABLE;
-  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.NbrOfConversion = 4;
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -569,45 +570,45 @@ static void MX_ADC2_Init(void)
     Error_Handler();
   }
 
-//  /** Configure Regular Channel
-//  */
-//  sConfig.Channel = ADC_CHANNEL_17;
-//  sConfig.Rank = ADC_REGULAR_RANK_1;
-//  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
-//  sConfig.SingleDiff = ADC_SINGLE_ENDED;
-//  sConfig.OffsetNumber = ADC_OFFSET_NONE;
-//  sConfig.Offset = 0;
-//  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_17;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-//  /** Configure Regular Channel
-//  */
-//  sConfig.Channel = ADC_CHANNEL_3;
-//  sConfig.Rank = ADC_REGULAR_RANK_2;
-//  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-//  /** Configure Regular Channel
-//  */
-//  sConfig.Channel = ADC_CHANNEL_4;
-//  sConfig.Rank = ADC_REGULAR_RANK_3;
-//  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Rank = ADC_REGULAR_RANK_3;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-//  /** Configure Regular Channel
-//  */
-//  sConfig.Channel = ADC_CHANNEL_13;
-//  sConfig.Rank = ADC_REGULAR_RANK_4;
-//  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_13;
+  sConfig.Rank = ADC_REGULAR_RANK_4;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN ADC2_Init 2 */
 
   /* USER CODE END ADC2_Init 2 */
@@ -981,18 +982,24 @@ static void MX_GPIO_Init(void)
 /**
   * @brief EXTI line detection callbacks
   * @param GPIO_Pin: Specifies the pins connected EXTI line
+	* Neu co GPS, se co xung PPS tai thoi diem bat dau moi giay
+  * If GPS avaiable, PPS pulse start at the start of a second
   * @retval None
   */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  if (GPIO_Pin == GPS2PPS_Pin)
-  {
-		printf("GPS2PPS\r\n");
-  }
-	
+  //Dong bo xung PPS GPS
+	//Uu tien GPS1: neu có pps thi lay cua GPS1 truoc
+	//Neu GPS1 ko co PPS thi moi lay PPS cua GPS2
 	if (GPIO_Pin == GPS1PPS_Pin)
   {
+		HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
 		printf("GPS1PPS\r\n");
+  }
+	else if (GPIO_Pin == GPS2PPS_Pin)
+  {
+		HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
+		printf("GPS2PPS\r\n");
   }
 }
 
@@ -1000,13 +1007,16 @@ void scan_ADC(void)
 	{
 		uint32_t raw;
 		
-	HAL_ADC_Start(&hadc1);
+			HAL_ADC_Start(&hadc1);
 			HAL_ADC_PollForConversion(&hadc1, 100);
 			raw = HAL_ADC_GetValue(&hadc1);
 			HAL_ADC_Stop(&hadc1);
 			// Convert to string and print
 			//printf("PA1-ADC1-IN2 :%d\r\n", raw);
-			
+		//Tinh toan dien ap 12V
+			main_status.v12V = (uint16_t)(k12v * (float)raw);
+			printf("Den ap 12V: %2.1f\r\n", (float)(main_status.v12V)/10.0);
+		
 			ADC_Select_CH17();
 		HAL_ADC_Start(&hadc2);
 		HAL_ADC_PollForConversion(&hadc2, 200);
@@ -1014,6 +1024,8 @@ void scan_ADC(void)
 		HAL_ADC_Stop(&hadc2);
 		// Convert to string and print
 		//printf("PA4-ADC2-IN17 :%d\r\n", raw);
+		
+		
 		ADC_Select_CH13();
 		HAL_ADC_Start(&hadc2);
 		HAL_ADC_PollForConversion(&hadc2, 200);
@@ -1082,10 +1094,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 			{
 				GPS2_UART_CallBack();
 			}
-			
-			
-	
-        
+				        
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle)

@@ -86,6 +86,30 @@ void Error_Handler(void);
 #define LED_GPS1_GPIO_Port GPIOC
 #define LED_CPU_Pin GPIO_PIN_12
 #define LED_CPU_GPIO_Port GPIOC
+
+
+// hieu chuan gia tri dien ap
+#define k12v 		0.0384
+#define k5v 		0.0384
+#define kDCin1 	0.0384
+#define kDCin2 	0.0384
+
+typedef struct{
+
+  uint16_t vin1x10;//dien ap vao 1 x10, 240 = 24.0V
+	uint16_t vin2x10;//dien ap vao 2 x10, 722 = 72.2V
+	uint16_t v12V;//dien ap vao 12V x10,  123 = 12.3V
+	uint16_t v5V;//dien ap vao 5V x10
+	uint16_t v3V3;//dien ap vao 3V3 x10
+	uint8_t gps1_stt;//trang thai chip GPS1 
+	uint8_t gps2_stt;//trang thai chip GPS2
+	uint8_t gps_pps; 
+} main_sst;
+
+// Thoi gian luu GPS vao RTC (minutes)
+#define RTC_store_time 60
+//Tre xu ly du lieu thoi gian (ns)
+#define DelayOfProcess 60
 /* USER CODE BEGIN Private defines */
 /* User can use this section to tailor ADCx instance under use and associated
    resources */
