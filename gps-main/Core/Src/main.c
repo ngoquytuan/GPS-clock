@@ -199,7 +199,13 @@ void ADC_Select_CH17 (void)
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void check(uint8_t *gps)
+{
+	printf("%c",gps[0]);
+	if(gps[0] =='G') printf("ok\r\n");
+	else gps++;
+	printf("%c",gps[0]);
+}
 /* USER CODE END 0 */
 
 /**
@@ -354,6 +360,8 @@ uint8_t test=0;
     /* Calibration Error */
     Error_Handler();
   }
+	HAL_UART_Abort(GPS1_USART);
+	HAL_UART_Receive_IT(&huart1, Rx1Buffer, RX1BUFFERSIZE);
   while (1)
   {
     /* USER CODE END WHILE */
@@ -366,6 +374,15 @@ uint8_t test=0;
 			scan_ADC();	
 			//printf("1S\r\n");
 			
+		}
+		if(u1Timeout == 1) 
+		{
+			u1Timeout = 0;
+			//printf("U1 %s; \r\n",Rx1Buffer);
+			check(Rx1Buffer);
+			huart1.pRxBuffPtr = (uint8_t *)Rx1Buffer;
+			huart1.RxXferCount = RX1BUFFERSIZE;
+			memset(Rx1Buffer,0,RX1BUFFERSIZE);
 		}
 		if(tim20ct < 100) {
 			
@@ -1015,7 +1032,7 @@ void scan_ADC(void)
 			//printf("PA1-ADC1-IN2 :%d\r\n", raw);
 		//Tinh toan dien ap 12V
 			main_status.v12V = (uint16_t)(k12v * (float)raw);
-			printf("Den ap 12V: %2.1f\r\n", (float)(main_status.v12V)/10.0);
+			//printf("Den ap 12V: %2.1f\r\n", (float)(main_status.v12V)/10.0);
 		
 			ADC_Select_CH17();
 		HAL_ADC_Start(&hadc2);

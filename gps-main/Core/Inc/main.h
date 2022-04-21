@@ -89,6 +89,7 @@ void Error_Handler(void);
 
 
 // hieu chuan gia tri dien ap
+//Tim cach nap lai he so K ma ko can nap lai chip!!
 #define k12v 		0.0384
 #define k5v 		0.0384
 #define kDCin1 	0.0384

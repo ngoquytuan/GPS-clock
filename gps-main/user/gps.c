@@ -35,8 +35,8 @@ void GPS_print(char *data){
 
 void GPS_Init(void)
 {
-	HAL_UART_Abort(GPS1_USART);
-	HAL_UART_Receive_IT(GPS1_USART, &rx1_data, 1);
+	//HAL_UART_Abort(GPS1_USART);
+	//HAL_UART_Receive_IT(GPS1_USART, &rx1_data, 1);
 	HAL_UART_Abort(GPS2_USART);
 	HAL_UART_Receive_IT(GPS2_USART, &rx2_data, 1);
 }
