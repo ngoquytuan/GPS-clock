@@ -47,7 +47,7 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 extern time_t unixTime_last_sync;
-
+extern uint8_t serverPacket[];
 extern time_t micros_recv;
 //time_t micros_offset = 0;
 //time_t transmitTime = 0;
@@ -58,15 +58,16 @@ time_t timenow = 1651031566;
 struct tm* timeinfo;
 
 uint32_t	_loop1=0;
-wiz_NetInfo gWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x6F},
-                            .ip = {192, 168, 1, 163},
-                            .sn = {255,255,255,1},
-                            .gw = {192, 168, 1, 1},
-                            .dns = {8,8,8,8},
-                            .dhcp = NETINFO_STATIC };
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x6F},
+															 .ip = {192, 168, 22, 163},
+															 .sn = {255,255,255,1},
+															 .gw = {192, 168, 22, 252},
+															 .dns = {8,8,8,8},
+															 .dhcp = NETINFO_STATIC };
 
 
-uint8_t u1Timeout=0;
+uint8_t u1Timeout = 0;
+uint8_t u2Timeout = 0;
 uint32_t timct=0;
 														
 //for smnp
@@ -86,6 +87,7 @@ uint8_t years = 0;
 uint8_t hours = 0;
 uint8_t minutes = 0;
 uint8_t seconds = 0;
+struct tm currtime;
 /* Size of Reception buffer */
 #define RXBUFFERSIZE                      100
 /* Buffer used for reception */
@@ -105,7 +107,6 @@ TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
-UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 
@@ -122,7 +123,6 @@ static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -136,7 +136,7 @@ void ntpserverdefaultconfig(void);
 void INT_NTP(void);
 int32_t NTPUDP(void);
 
-
+void main_message_handle(void);
 /* USER CODE END 0 */
 
 /**
@@ -147,6 +147,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
   int32_t ret = 0;	
+	int8_t count_to_send_main=0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -175,10 +176,11 @@ int main(void)
   MX_TIM4_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   printf("This code gen by STMcube; STM32G474RBT6@160MHz\r\n");
-	//HAL_UART_Transmit(&huart1, (uint8_t *)"UART1 TX ok\r\n", 13, 100);
+	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
+	HAL_UART_Transmit(&huart1, (uint8_t *)"UART1 TX ok\r\n", 13, 100);
+	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
 	//storeValue();
 	//loadValue();
 	w5500_lib_init();
@@ -207,8 +209,8 @@ int main(void)
 	loadwebpages();
 	fractionOfSecond = 0;
 	
-	HAL_UART_Abort(&huart1);
-  if (HAL_UART_Receive_IT(&huart1, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+	HAL_UART_Abort(&huart2);
+  if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
   {
     /* Transfer error in reception process */
     Error_Handler();
@@ -252,7 +254,7 @@ int main(void)
 		if(timct > 1000) {
 			timct = 0;
 			timenow++;
-			
+			count_to_send_main++;
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 		
 			//printf("1s\r\n");
@@ -263,13 +265,23 @@ int main(void)
 			
 			
 		}
-		
-		if(u1Timeout == 1) 
+		if(count_to_send_main > 5)
+		{
+			count_to_send_main = 0;
+			//printf("IP:%02X.%02X.%02X.%02X\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+			printf("IP %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+		}
+		if(u2Timeout == 1) 
 			{
-				u1Timeout = 0;
-				printf("aRxBuffer %s; \r\n",aRxBuffer);
-				huart1.pRxBuffPtr = (uint8_t *)aRxBuffer;
-				huart1.RxXferCount = RXBUFFERSIZE;
+				u2Timeout = 0;
+				main_message_handle();
+				//Truyen ban tin cho cac dong ho slave
+				HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
+				HAL_UART_Transmit(&huart1, aRxBuffer, 20, 100);
+				HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
 				memset(aRxBuffer,0,RXBUFFERSIZE);
 			}
   }
@@ -561,7 +573,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -609,7 +621,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -638,54 +650,6 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
-}
-
-/**
-  * @brief USART3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART3_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART3_Init 0 */
-
-  /* USER CODE END USART3_Init 0 */
-
-  /* USER CODE BEGIN USART3_Init 1 */
-
-  /* USER CODE END USART3_Init 1 */
-  huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
-  huart3.Init.WordLength = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits = UART_STOPBITS_1;
-  huart3.Init.Parity = UART_PARITY_NONE;
-  huart3.Init.Mode = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart3.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetTxFifoThreshold(&huart3, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetRxFifoThreshold(&huart3, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_DisableFifoMode(&huart3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART3_Init 2 */
-
-  /* USER CODE END USART3_Init 2 */
 
 }
 
@@ -812,9 +776,7 @@ PUTCHAR_PROTOTYPE
 {
 	/* Place your implementation of fputc here */
 	/* e.g. write a character to the USART */
-	HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 100);
-	//start loop1 
-	//_loop1 = _loop1_run;
+	HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 100);
 	return ch;
 }
 
@@ -843,8 +805,66 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 			{
 				printf("U1 full\r\n");
 			}
-
+			if(UartHandle == &huart2) 
+			{
+				printf("U2 full\r\n");
+			}
 				        
+}
+
+//Ham chuyen doi char sang int
+uint8_t convert_atoi( uint8_t c)
+{
+	return (uint8_t)c-48;
+}
+//Xu ly ban tin tu mach main
+void main_message_handle(void)
+{//=> Ban tin GPS: $GPS034007060819AA10	;$$GPS091259280422AA10
+	if((aRxBuffer[0] =='$')&((aRxBuffer[1] =='G')|(aRxBuffer[1] =='g'))&((aRxBuffer[2] =='P')|(aRxBuffer[2] =='p'))&((aRxBuffer[3] =='S')|(aRxBuffer[3] =='s')))
+	{
+		/*Truyen gia tri gui len web server*/
+		//If there is not GPS master message, no time on webserver
+		days 		= 10*convert_atoi(aRxBuffer[10])+convert_atoi(aRxBuffer[11]);
+		months 	= 10*convert_atoi(aRxBuffer[12])+convert_atoi(aRxBuffer[13]);
+		years 	= 10*convert_atoi(aRxBuffer[14])+convert_atoi(aRxBuffer[15]);
+		hours 	= 10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5])  ;//UTC
+		minutes = 10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
+		seconds = 10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
+			
+		/*Cap nhap thoi gian NTP*/
+		currtime.tm_year = 100+ years;//100+10*convert_atoi(aRxBuffer[14])+convert_atoi(aRxBuffer[15]);//In fact: 2000+xxx-1900
+		currtime.tm_mon  = months-1;//10*convert_atoi(aRxBuffer[12])+convert_atoi(aRxBuffer[13])-1;
+		currtime.tm_mday = days;//10*convert_atoi(aRxBuffer[10])+convert_atoi(aRxBuffer[11]);
+		
+		currtime.tm_sec  = seconds;//10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
+		currtime.tm_min  = minutes;//10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
+		currtime.tm_hour = hours;//10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5]);
+		timenow = mktime(&currtime);
+		timenow = timenow - 25200;//Tru di 7 tieng
+		timeOutLostSignal = 30;//seconds 
+		lostSignal = GPS_MASTER_OK;
+		
+		
+		#ifdef _U1_DEBUG_ENABLE_
+		printf("new timestamp:%d\r\n",timenow);
+		timeinfo = localtime( &timenow );
+		printf("Current local time and date: %s\r\n", asctime(timeinfo));
+		#endif
+		//Update last sync NTP time server field!
+		unixTime_last_sync = timenow + STARTOFTIME;
+		unixTime_last_sync = htonl(unixTime_last_sync);
+		memcpy(&serverPacket[16], &unixTime_last_sync, 4);
+		
+		//Update SNMP data table
+		if(aRxBuffer[16]=='A') gps1_stt = 1;
+		else gps1_stt = 0;
+		if(aRxBuffer[17]=='A') gps2_stt = 1;
+		else gps2_stt = 0;
+		if(aRxBuffer[18]=='1') power1_stt = 1;
+		else power1_stt = 0;
+		if(aRxBuffer[19]=='1') power2_stt = 1;
+		else power2_stt = 0;
+	}
 }
 /* USER CODE END 4 */
 

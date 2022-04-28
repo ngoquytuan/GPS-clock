@@ -327,7 +327,8 @@ int8_t ctlwizchip(ctlwizchip_type cwtype, void* arg)
          ((uint8_t*)arg)[2] = WIZCHIP.id[2];
          ((uint8_t*)arg)[3] = WIZCHIP.id[3];
          ((uint8_t*)arg)[4] = WIZCHIP.id[4];
-         ((uint8_t*)arg)[5] = 0;
+         ((uint8_t*)arg)[5] = WIZCHIP.id[5];
+         ((uint8_t*)arg)[6] = 0;
          break;
    #if _WIZCHIP_ == W5100S || _WIZCHIP_ == W5500
       case CW_RESET_PHY:
@@ -521,7 +522,12 @@ void wizchip_clrinterrupt(intr_kind intr)
    setIR( ((((uint16_t)ir) << 8) | (((uint16_t)sir) & 0x00FF)) );
 #else
    setIR(ir);
-   setSIR(sir);
+//M20200227 : For clear
+   //setSIR(sir);
+   for(ir=0; ir<8; ir++){
+       if(sir & (0x01 <<ir) ) setSn_IR(ir, 0xff);
+   }
+
 #endif   
 }
 
@@ -560,7 +566,6 @@ void wizchip_setinterruptmask(intr_kind intr)
 {
    uint8_t imr  = (uint8_t)intr;
    uint8_t simr = (uint8_t)((uint16_t)intr >> 8);
-	//printf("imr:%d, simr :%d\r\n",imr,simr);
 #if _WIZCHIP_ < W5500
    imr &= ~(1<<4); // IK_WOL
 #endif

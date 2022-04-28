@@ -10,7 +10,7 @@
 #define MSEC_PHYSTATUS_CHECK 		1000		// msec
 #define PHYStatus_check_enable 1
 
-extern wiz_NetInfo gWIZNETINFO;
+extern wiz_NetInfo myipWIZNETINFO;
 extern volatile uint16_t phystatus_check_cnt;
 extern SPI_HandleTypeDef hspi1;
 
@@ -101,11 +101,11 @@ void loadValue(void)
 	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+4);
 	//printf("first data32 %x\r\n",data32);
 	
-	gWIZNETINFO.ip[3] = (uint8_t)data32;
-	gWIZNETINFO.ip[2] = (uint8_t)(data32>>8);
-	gWIZNETINFO.ip[1] = (uint8_t)(data32>>16);
-	gWIZNETINFO.ip[0] = (uint8_t)(data32>>24);	
-	//printf("Load IP: %d.%d.%d.%d\r\n",gWIZNETINFO.ip[0],gWIZNETINFO.ip[1],gWIZNETINFO.ip[2],gWIZNETINFO.ip[3]);
+	myipWIZNETINFO.ip[3] = (uint8_t)data32;
+	myipWIZNETINFO.ip[2] = (uint8_t)(data32>>8);
+	myipWIZNETINFO.ip[1] = (uint8_t)(data32>>16);
+	myipWIZNETINFO.ip[0] = (uint8_t)(data32>>24);	
+	//printf("Load IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
 		
 	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+8);
 	//printf("last data32 %x\r\n",data32);
@@ -162,8 +162,8 @@ void storeValue(void)
 	//temp = DATA_32;
 	//temp = temp<<32;
 	temp  = 0;
-	temp |= (gWIZNETINFO.ip[0] <<24) |(gWIZNETINFO.ip[1] <<16)|(gWIZNETINFO.ip[2] <<8)|gWIZNETINFO.ip[3];
-  printf("temp : %x\r\n",(gWIZNETINFO.ip[0] <<24) +(gWIZNETINFO.ip[1] <<16)+(gWIZNETINFO.ip[2] <<8)+gWIZNETINFO.ip[3]);
+	temp |= (myipWIZNETINFO.ip[0] <<24) |(myipWIZNETINFO.ip[1] <<16)|(myipWIZNETINFO.ip[2] <<8)|myipWIZNETINFO.ip[3];
+  printf("temp : %x\r\n",(myipWIZNETINFO.ip[0] <<24) +(myipWIZNETINFO.ip[1] <<16)+(myipWIZNETINFO.ip[2] <<8)+myipWIZNETINFO.ip[3]);
 	temp = DATA_32 | (temp<<32);
     if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR, temp) == HAL_OK)
     {
@@ -295,23 +295,23 @@ static void  wizchip_writeburst(uint8_t* pBuf, uint16_t len)
 void Display_Net_Conf()
 {
 	uint8_t tmpstr[6] = {0,};
-	wiz_NetInfo gWIZNETINFO;
+	wiz_NetInfo tempWIZNETINFO;
 
-	ctlnetwork(CN_GET_NETINFO, (void*) &gWIZNETINFO);
+	ctlnetwork(CN_GET_NETINFO, (void*) &tempWIZNETINFO);
 	ctlwizchip(CW_GET_ID,(void*)tmpstr);
 
 	// Display Network Information
-	if(gWIZNETINFO.dhcp == NETINFO_DHCP) printf("\r\n===== %s NET CONF : DHCP =====\r\n",(char*)tmpstr);
+	if(tempWIZNETINFO.dhcp == NETINFO_DHCP) printf("\r\n===== %s NET CONF : DHCP =====\r\n",(char*)tmpstr);
 		else printf("\r\n===== %s NET CONF : Static =====\r\n",(char*)tmpstr);
 
-	printf("\r\nMAC: %02X:%02X:%02X:%02X:%02X:%02X\r\n", gWIZNETINFO.mac[0], gWIZNETINFO.mac[1], gWIZNETINFO.mac[2], gWIZNETINFO.mac[3], gWIZNETINFO.mac[4], gWIZNETINFO.mac[5]);
-	printf("IP: %d.%d.%d.%d\r\n", gWIZNETINFO.ip[0], gWIZNETINFO.ip[1], gWIZNETINFO.ip[2], gWIZNETINFO.ip[3]);
-	printf("GW: %d.%d.%d.%d\r\n", gWIZNETINFO.gw[0], gWIZNETINFO.gw[1], gWIZNETINFO.gw[2], gWIZNETINFO.gw[3]);
-	printf("SN: %d.%d.%d.%d\r\n", gWIZNETINFO.sn[0], gWIZNETINFO.sn[1], gWIZNETINFO.sn[2], gWIZNETINFO.sn[3]);
-	printf("DNS: %d.%d.%d.%d\r\n", gWIZNETINFO.dns[0], gWIZNETINFO.dns[1], gWIZNETINFO.dns[2], gWIZNETINFO.dns[3]);
+	printf("\r\nMAC: %02X:%02X:%02X:%02X:%02X:%02X\r\n", tempWIZNETINFO.mac[0], tempWIZNETINFO.mac[1], tempWIZNETINFO.mac[2], tempWIZNETINFO.mac[3], tempWIZNETINFO.mac[4], tempWIZNETINFO.mac[5]);
+	printf("IP: %d.%d.%d.%d\r\n", tempWIZNETINFO.ip[0], tempWIZNETINFO.ip[1], tempWIZNETINFO.ip[2], tempWIZNETINFO.ip[3]);
+	printf("GW: %d.%d.%d.%d\r\n", tempWIZNETINFO.gw[0], tempWIZNETINFO.gw[1], tempWIZNETINFO.gw[2], tempWIZNETINFO.gw[3]);
+	printf("SN: %d.%d.%d.%d\r\n", tempWIZNETINFO.sn[0], tempWIZNETINFO.sn[1], tempWIZNETINFO.sn[2], tempWIZNETINFO.sn[3]);
+	printf("DNS: %d.%d.%d.%d\r\n", tempWIZNETINFO.dns[0], tempWIZNETINFO.dns[1], tempWIZNETINFO.dns[2], tempWIZNETINFO.dns[3]);
 	
 	//printf("\r\n=== DNS Client Example ===============\r\n");
-  //printf("> DNS 1st : %d.%d.%d.%d\r\n", gWIZNETINFO.dns[0], gWIZNETINFO.dns[1], gWIZNETINFO.dns[2], gWIZNETINFO.dns[3]);
+  //printf("> DNS 1st : %d.%d.%d.%d\r\n", tempWIZNETINFO.dns[0], tempWIZNETINFO.dns[1], tempWIZNETINFO.dns[2], tempWIZNETINFO.dns[3]);
   //printf("> DNS 2nd : %d.%d.%d.%d\r\n", DNS_2nd[0], DNS_2nd[1], DNS_2nd[2], DNS_2nd[3]);
   //printf("======================================\r\n");
    //printf("> Example Domain Name : %s\r\n", Domain_name);
@@ -360,7 +360,7 @@ void w5500_lib_init(void){
 		//GPIO_SetBits(W5500_RST_GPIO, W5500_RST);//RST High to run
 		HAL_GPIO_WritePin(RSTn_GPIO_Port, RSTn_Pin, GPIO_PIN_SET);
 		HAL_Delay(100);
-		//printf("...2");
+		
     ////////////////////////////////////////////////////////////////////////
 		/* WIZCHIP SOCKET Buffer initialize */
 		//Initializes to WIZCHIP with SOCKET buffer size 2 or 1 dimension array typed uint8_t
@@ -387,7 +387,7 @@ void w5500_lib_init(void){
 			printf("Cannot set imr...\r\n");
 		}
 		//printf("...all ok\r\n");
-		Net_Conf(gWIZNETINFO);
+		Net_Conf(myipWIZNETINFO);
 	
 }
 

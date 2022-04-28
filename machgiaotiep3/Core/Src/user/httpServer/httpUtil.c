@@ -16,7 +16,7 @@
 #include "httpUtil.h"
 #include "ConfigData.h"
 //#include "eeprom_stm.h"//save IP
-extern wiz_NetInfo gWIZNETINFO;
+extern wiz_NetInfo myipWIZNETINFO;
 /************************************************************************************************/
 #define DIOn			16
 #define AINn			7 	// AIN for PTM/Temp.Sensor + A0 ~ A5

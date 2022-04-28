@@ -117,6 +117,7 @@ int8_t socket(uint8_t sn, uint8_t protocol, uint16_t port, uint8_t flag)
             uint32_t taddr;
             getSIPR((uint8_t*)&taddr);
             if(taddr == 0) return SOCKERR_SOCKINIT;
+	    break;
          }
       case Sn_MR_UDP :
       case Sn_MR_MACRAW :
@@ -243,8 +244,7 @@ int8_t listen(uint8_t sn)
    CHECK_SOCKMODE(Sn_MR_TCP);
 	CHECK_SOCKINIT();
 	setSn_CR(sn,Sn_CR_LISTEN);
-	while(getSn_CR(sn))
-		;
+	while(getSn_CR(sn));
    while(getSn_SR(sn) != SOCK_LISTEN)
    {
          close(sn);
@@ -557,8 +557,7 @@ int32_t sendto(uint8_t sn, uint8_t * buf, uint16_t len, uint8_t * addr, uint16_t
 //   
 	setSn_CR(sn,Sn_CR_SEND);
 	/* wait to process the command... */
-	while(getSn_CR(sn))
-		;
+	while(getSn_CR(sn));
    while(1)
    {
       tmp = getSn_IR(sn);
@@ -645,8 +644,7 @@ int32_t recvfrom(uint8_t sn, uint8_t * buf, uint16_t len, uint8_t * addr, uint16
 	      {
    			wiz_recv_data(sn, head, 8);
    			setSn_CR(sn,Sn_CR_RECV);
-   			while(getSn_CR(sn))
-					;
+   			while(getSn_CR(sn));
    			// read peer's IP address, port number & packet length
    	   //A20150601 : For W5300
    		#if _WIZCHIP_ == 5300
@@ -700,8 +698,7 @@ int32_t recvfrom(uint8_t sn, uint8_t * buf, uint16_t len, uint8_t * addr, uint16
 	      {
    			wiz_recv_data(sn, head, 2);
    			setSn_CR(sn,Sn_CR_RECV);
-   			while(getSn_CR(sn))
-					;
+   			while(getSn_CR(sn));
    			// read peer's IP address, port number & packet length
     			sock_remained_size[sn] = head[0];
    			sock_remained_size[sn] = (sock_remained_size[sn] <<8) + head[1] -2;
@@ -862,7 +859,7 @@ int8_t  setsockopt(uint8_t sn, sockopt_type sotype, void* arg)
          		}
             }
          break;
-   #if _WIZCHIP_ > 5100
+   #if !( (_WIZCHIP_ == 5100) || (_WIZCHIP_ == 5200) )
       case SO_KEEPALIVEAUTO:
          CHECK_SOCKMODE(Sn_MR_TCP);
          setSn_KPALVTR(sn,*(uint8_t*)arg);

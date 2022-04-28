@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G474xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../Core/Src/user/ethernet;../Core/Src/user;../Core/Src/user/ethernet/W5500;..\Core\Src\user\httpServer;..\Core\Src\user\SNMP</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../Core/Src/user/ethernet;../Core/Src/user;../Core/Src/user/ethernet/W5500;../Core/Src/user/httpServer;../Core/Src/user/SNMP</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -415,21 +415,6 @@
               <FilePath>..\Core\Src\user\ethernet\socket.c</FilePath>
             </File>
             <File>
-              <FileName>main.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Core/Src/main.c</FilePath>
-            </File>
-            <File>
-              <FileName>stm32g4xx_it.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Core/Src/stm32g4xx_it.c</FilePath>
-            </File>
-            <File>
-              <FileName>stm32g4xx_hal_msp.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Core/Src/stm32g4xx_hal_msp.c</FilePath>
-            </File>
-            <File>
               <FileName>ntpServer.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\user\ntpServer.c</FilePath>
@@ -458,6 +443,21 @@
               <FileName>ConfigData.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\user\httpServer\ConfigData.c</FilePath>
+            </File>
+            <File>
+              <FileName>main.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/main.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32g4xx_it.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/stm32g4xx_it.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32g4xx_hal_msp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/stm32g4xx_hal_msp.c</FilePath>
             </File>
           </Files>
         </Group>

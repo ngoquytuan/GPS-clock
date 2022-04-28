@@ -4,14 +4,14 @@
 #include "stm32g4xx_hal.h"
 #include "w5500.h"
 #include "socket.h"
-//#include "socketdefines.h"
+#include "socketdefines.h"
 
 //#include "ntpserver.h"
 // Time Server Port
-#define SOCK_UDPS        			0
-#define NTP_PORT							123
-#define NTP_PACKET_SIZE 			48
-#define NTP_PACKET_RAWSIZE		56
+//#define SOCK_UDPS        			0
+//#define NTP_PORT							123
+//#define NTP_PACKET_SIZE 			48
+//#define NTP_PACKET_RAWSIZE		56
 #define fractionOfSecond TIM4->CNT
 
 extern time_t timenow;

@@ -42,6 +42,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 extern uint8_t u1Timeout;
+extern uint8_t u2Timeout;
 extern uint32_t timct;
 extern volatile uint32_t snmp_tick_1ms;
 volatile uint16_t phystatus_check_cnt = 0;
@@ -61,6 +62,7 @@ volatile uint16_t phystatus_check_cnt = 0;
 extern DMA_HandleTypeDef hdma_dac1_ch1;
 extern TIM_HandleTypeDef htim3;
 extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -241,6 +243,7 @@ void TIM3_IRQHandler(void)
 	snmp_tick_1ms++;
 	phystatus_check_cnt++;
 	if(u1Timeout>1) u1Timeout--;
+	if(u2Timeout>1) u2Timeout--;
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
@@ -260,6 +263,20 @@ void USART1_IRQHandler(void)
   /* USER CODE BEGIN USART1_IRQn 1 */
   if (HAL_UART_GetState(&huart1) == HAL_UART_STATE_BUSY_RX) u1Timeout=50;
   /* USER CODE END USART1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt / USART2 wake-up interrupt through EXTI line 26.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+  if (HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_RX) u2Timeout=50;
+  /* USER CODE END USART2_IRQn 1 */
 }
 
 /**
