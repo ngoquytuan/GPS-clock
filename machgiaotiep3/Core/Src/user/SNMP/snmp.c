@@ -46,6 +46,8 @@ extern uint8_t gps2_stt;
 extern uint8_t power1_stt;
 extern uint8_t power2_stt;
 extern int8_t lostSignal;
+extern time_t timenow;
+extern struct tm* timeinfo;
 
 void get_gpsStatus_all(void *ptr, uint8_t *len);
 //void currentUptime(void *ptr, uint8_t *len)
@@ -76,7 +78,12 @@ void get_gpsmaster_stt(void *ptr, uint8_t *len)
 {
 	*len = sprintf((char *)ptr, "GPS master status: %s", lostSignal?"OK":"LOST SIGNAL");
 }
-
+void get_gpsmaster_time(void *ptr, uint8_t *len)
+{
+	timeinfo = localtime( &timenow );
+	//printf("Current local time and date: %s\r\n", asctime(timeinfo));
+	*len = sprintf((char *)ptr, "Current time: %s", asctime(timeinfo));
+}
 dataEntryType snmpData[] =
 {
     // System MIB
@@ -122,7 +129,9 @@ dataEntryType snmpData[] =
 	{8, {0x2b, 6, 1, 4, 1, 6, 1, 2},
 	SNMPDTYPE_OCTET_STRING, 40, {""},
 	get_gpsmaster_stt, NULL},
-  
+  {8, {0x2b, 6, 1, 4, 1, 6, 1, 3},
+	SNMPDTYPE_OCTET_STRING, 40, {""},
+	get_gpsmaster_time, NULL},
 
 };
 

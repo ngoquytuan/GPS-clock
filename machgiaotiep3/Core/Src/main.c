@@ -32,7 +32,7 @@
 #include "httpServer.h"
 #include "webpage.h"
 #include "snmp.h"
-#define irigb_debug
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +46,8 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+
+//#define irigb_debug
 //bo dem irigB 0-99
 int8_t codecounter = 0;
 volatile unsigned int hourcode=0, minutecode=0, secondcode=0, daycode=0, monthcode=0, yearcode=0, nodaycode=0;
@@ -71,9 +73,9 @@ struct tm* timeinfo;
 
 uint32_t	_loop1=0;
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x6F},
-															 .ip = {192, 168, 22, 163},
+															 .ip = {192, 168, 1, 163},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 22, 252},
+															 .gw = {192, 168, 1, 1},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 
@@ -100,6 +102,14 @@ uint8_t hours = 0;
 uint8_t minutes = 0;
 uint8_t seconds = 0;
 struct tm currtime;
+
+//NTP client
+extern uint16_t RetrySend ; //60 giay
+extern uint16_t sycnPeriod ;// 1 gio
+void SNTP_init(void);
+int8_t SNTP_run(void);
+
+//UART
 /* Size of Reception buffer */
 #define RXBUFFERSIZE                      100
 /* Buffer used for reception */
@@ -217,6 +227,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	
+	SNTP_init();
 	
 	printf("Run\r\n");
 	unixTime_last_sync = timenow;
@@ -283,11 +294,15 @@ int main(void)
 			httpServer_run(1);
 			httpServer_run(2);
 		
-		
+		SNTP_run();
 		if(timct > 1000) {
 			timct = 0;
 			timenow++;
 			count_to_send_main++;
+			
+			RetrySend++;
+			sycnPeriod++;
+			
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 		
 			//printf("1s\r\n");
