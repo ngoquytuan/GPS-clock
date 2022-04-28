@@ -373,11 +373,11 @@ void w5500_lib_init(void){
 		//printf("...get PHY Link status");
 		/* PHY link status check */
     
-		do
-    {
-       if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
-          ;//printf("Unknown PHY Link stauts.\r\n");
-    }while(tmp == PHY_LINK_OFF);
+//		do
+//    {
+//       if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
+//          ;//printf("Unknown PHY Link stauts.\r\n");
+//    }while(tmp == PHY_LINK_OFF);
 
 		
 		//Cau hinh ngat tren Socket 0, vi can biet thoi diem ban tin NTP den!!
@@ -390,4 +390,9 @@ void w5500_lib_init(void){
 		Net_Conf(myipWIZNETINFO);
 	
 }
+
+void u1_message_handle(void)
+{
+}
+
 

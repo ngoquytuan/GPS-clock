@@ -32,7 +32,7 @@
 #include "httpServer.h"
 #include "webpage.h"
 #include "snmp.h"
-
+#define irigb_debug
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +46,18 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+//bo dem irigB 0-99
+int8_t codecounter = 0;
+volatile unsigned int hourcode=0, minutecode=0, secondcode=0, daycode=0, monthcode=0, yearcode=0, nodaycode=0;
+uint8_t startbuildcode,stopbuildcode;
+void resetirigbcode(void);
+volatile char time_buff1[7], time_buff2[7];
+volatile char date_buff1[7], date_buff2[7];
+unsigned char daysofmonth[12]={31,28,31,30,31,30,31,31,30,31,30,31};
+unsigned char daysofmonth2[12]={31,29,31,30,31,30,31,31,30,31,30,31};
+//unsigned long timeofday=0;
+/* end of irigb variables -------------------------------------------------------------*/
+
 extern time_t unixTime_last_sync;
 extern uint8_t serverPacket[];
 extern time_t micros_recv;
@@ -54,7 +66,7 @@ extern time_t micros_recv;
 //time_t micros_transmit = 0;
 extern time_t recvTime;
 
-time_t timenow = 1651031566;
+time_t timenow = 1651133756;
 struct tm* timeinfo;
 
 uint32_t	_loop1=0;
@@ -137,6 +149,8 @@ void INT_NTP(void);
 int32_t NTPUDP(void);
 
 void main_message_handle(void);
+void u1_message_handle(void);
+void build_irigB_code(void);
 /* USER CODE END 0 */
 
 /**
@@ -148,6 +162,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
   int32_t ret = 0;	
 	int8_t count_to_send_main=0;
+	char msg[100];
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -178,12 +193,18 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   printf("This code gen by STMcube; STM32G474RBT6@160MHz\r\n");
-	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
-	HAL_UART_Transmit(&huart1, (uint8_t *)"UART1 TX ok\r\n", 13, 100);
-	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
+	
+	
+	
 	//storeValue();
 	//loadValue();
 	w5500_lib_init();
+	
+	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
+	HAL_UART_Transmit(&huart1, (uint8_t *)"UART1 TX ok\r\n", 13, 100);
+	sprintf(msg,"IP %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+	HAL_UART_Transmit(&huart1, (uint8_t *)msg, 20, 100);
+	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
 	
 	HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
 	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_Bit0, 1280, DAC_ALIGN_12B_R);
@@ -201,6 +222,18 @@ int main(void)
 	unixTime_last_sync = timenow;
 	timeinfo = localtime( &timenow );
 	printf("Current local time and date: %s\r\n", asctime(timeinfo));
+	
+	//printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
+	//printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
+	codecounter = 0;		
+	days = timeinfo->tm_mday;
+  months = 1+timeinfo->tm_mon;
+  years = timeinfo->tm_year-100;
+  hours = timeinfo->tm_hour;
+  minutes = timeinfo->tm_min;
+  seconds = timeinfo->tm_sec;
+
+  build_irigB_code();			
 	ntpserverdefaultconfig();
 	/* SNMP(Simple Network Management Protocol) Agent Initialize */
 	// NMS (SNMP manager) IP address
@@ -265,7 +298,7 @@ int main(void)
 			
 			
 		}
-		if(count_to_send_main > 5)
+		if(count_to_send_main > 59)
 		{
 			count_to_send_main = 0;
 			//printf("IP:%02X.%02X.%02X.%02X\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
@@ -283,6 +316,11 @@ int main(void)
 				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
 				huart2.RxXferCount = RXBUFFERSIZE;
 				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
+		if(u1Timeout == 1) 
+			{
+				u1Timeout = 0;
+				u1_message_handle();
 			}
   }
   /* USER CODE END 3 */
@@ -780,21 +818,136 @@ PUTCHAR_PROTOTYPE
 	return ch;
 }
 
+void build_irigB_code(void)
+{
+	uint8_t n=0;						
+					
+									
+						hourcode   = hours;
+						minutecode = minutes;
+						secondcode = seconds;
+
+						daycode   = days;
+						monthcode = months;
+						yearcode  = years;
+	
+#ifdef irigb_debug
+						printf("HH-MM-SS :%d-%d-%d",hours,minutes,seconds);
+						printf("DD-MM-YY :%d-%d-%d",days,months,years);
+#endif
+						for (n=0; n<monthcode-1;n++)
+						{
+							if ((yearcode%4)==0) nodaycode+=daysofmonth2[n];
+							else nodaycode+=daysofmonth[n];
+						}
+						nodaycode+=daycode;
+								
+
+						if (secondcode>=40) {irigb_code[8]=1;secondcode-=40;}
+						if (secondcode>=20) {irigb_code[7]=1;secondcode-=20;}
+						if (secondcode>=10) {irigb_code[6]=1;secondcode-=10;}
+						if (secondcode>=8) {irigb_code[4]=1;secondcode-=8;}
+						if (secondcode>=4) {irigb_code[3]=1;secondcode-=4;}
+						if (secondcode>=2) {irigb_code[2]=1;secondcode-=2;}
+						if (secondcode>=1) {irigb_code[1]=1;}
+
+						if (minutecode>=40) {irigb_code[17]=1;minutecode-=40;}
+						if (minutecode>=20) {irigb_code[16]=1;minutecode-=20;}
+						if (minutecode>=10) {irigb_code[15]=1;minutecode-=10;}
+						if (minutecode>=8) {irigb_code[13]=1;minutecode-=8;}
+						if (minutecode>=4) {irigb_code[12]=1;minutecode-=4;}
+						if (minutecode>=2) {irigb_code[11]=1;minutecode-=2;}
+						if (minutecode>=1) {irigb_code[10]=1;}
+
+						if (hourcode>=20) {irigb_code[26]=1;hourcode-=20;}
+						if (hourcode>=10) {irigb_code[25]=1;hourcode-=10;}
+						if (hourcode>=8) {irigb_code[23]=1;hourcode-=8;}
+						if (hourcode>=4) {irigb_code[22]=1;hourcode-=4;}
+						if (hourcode>=2) {irigb_code[21]=1;hourcode-=2;}
+						if (hourcode>=1) {irigb_code[20]=1;}
+
+					
+						if (yearcode>=80) {irigb_code[58]=1;yearcode-=80;}
+						if (yearcode>=40) {irigb_code[57]=1;yearcode-=40;}
+						if (yearcode>=20) {irigb_code[56]=1;yearcode-=20;}
+						if (yearcode>=10) {irigb_code[55]=1;yearcode-=10;}
+						if (yearcode>=8) {irigb_code[53]=1;yearcode-=8;}
+						if (yearcode>=4) {irigb_code[52]=1;yearcode-=4;}
+						if (yearcode>=2) {irigb_code[51]=1;yearcode-=2;}
+						if (yearcode>=1) {irigb_code[50]=1;}
+					
+
+						if (nodaycode>=200) {irigb_code[41]=1;nodaycode-=200;}
+						if (nodaycode>=100) {irigb_code[40]=1;nodaycode-=100;}
+						if (nodaycode>=80) {irigb_code[38]=1;nodaycode-=80;}
+						if (nodaycode>=40) {irigb_code[37]=1;nodaycode-=40;}
+						if (nodaycode>=20) {irigb_code[36]=1;nodaycode-=20;}
+						if (nodaycode>=10) {irigb_code[35]=1;nodaycode-=10;}
+						if (nodaycode>=8) {irigb_code[33]=1;nodaycode-=8;}
+						if (nodaycode>=4) {irigb_code[32]=1;nodaycode-=4;}
+						if (nodaycode>=2) {irigb_code[31]=1;nodaycode-=2;}
+						if (nodaycode>=1) {irigb_code[30]=1;}
+#ifdef irigb_debug						
+						printf("IRIGB-code:\r\n");
+						for(n = 0; n<100; n++)
+						{
+							if(irigb_code[n] == 2) printf("P ");
+							else printf("%d ",irigb_code[n]);
+						}
+						printf("\r\n end IRIGB-code:\r\n");
+#endif
+}
+void resetirigbcode(void)
+{
+unsigned char i=0;
+	for (i=0;i<100;i++)
+	{
+		irigb_code[i]=0;
+	}
+	irigb_code[0]=2;irigb_code[9]=2;irigb_code[19]=2;irigb_code[29]=2;
+	irigb_code[39]=2;irigb_code[49]=2;irigb_code[59]=2;irigb_code[69]=2;
+	irigb_code[79]=2;irigb_code[89]=2;irigb_code[99]=2;
+	nodaycode=0;
+	hourcode=0;
+	minutecode=0; 
+	secondcode=0; 
+	daycode=0; 
+	monthcode=0; 
+	yearcode=0; 
+	nodaycode=0;
+}
+
 void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac)
 {
 	
-	if(_loop1 == 0) 
+//	if(_loop1 == 0) 
+//		{
+//			_loop1 = 1; 
+//			//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_Bit0, 1280, DAC_ALIGN_12B_R);
+//			hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit0;
+//		}
+//	else 
+//		{
+//			//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_BitREF, 1280, DAC_ALIGN_12B_R);
+//			hdma_dac1_ch1.Instance->CMAR = (uint32_t)_BitREF;
+//			_loop1 = 0;
+//		}
+		//DAC se tao SIN tung bit0 bit1 bit REF theo bang irigb_code, quet xong 99 -> xong 1s thi quay lai 0 -> bat dau giay moi
+		switch(irigb_code[codecounter])
 		{
-			_loop1 = 1; 
-			//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_Bit0, 1280, DAC_ALIGN_12B_R);
-			hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit0;
+			case IRIGB_bit0:
+				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit0;
+				break;
+			case IRIGB_bit1:
+				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit1;
+				break;
+			case IRIGB_bitP:
+				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_BitREF;
+				break;
 		}
-	else 
-		{
-			//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_BitREF, 1280, DAC_ALIGN_12B_R);
-			hdma_dac1_ch1.Instance->CMAR = (uint32_t)_BitREF;
-			_loop1 = 0;
-		}
+		codecounter++;
+		if(codecounter == 99) codecounter = 0;
+		
 };
 
 //khi nao buffer full thi no se goi ham nay
@@ -830,7 +983,11 @@ void main_message_handle(void)
 		hours 	= 10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5])  ;//UTC
 		minutes = 10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
 		seconds = 10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
-			
+		
+		//Day coi nhu la diem bat dau cua second, bat dau irigb tu day
+		codecounter = 0;
+		build_irigB_code();	
+		
 		/*Cap nhap thoi gian NTP*/
 		currtime.tm_year = 100+ years;//100+10*convert_atoi(aRxBuffer[14])+convert_atoi(aRxBuffer[15]);//In fact: 2000+xxx-1900
 		currtime.tm_mon  = months-1;//10*convert_atoi(aRxBuffer[12])+convert_atoi(aRxBuffer[13])-1;
@@ -839,6 +996,7 @@ void main_message_handle(void)
 		currtime.tm_sec  = seconds;//10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
 		currtime.tm_min  = minutes;//10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
 		currtime.tm_hour = hours;//10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5]);
+		
 		timenow = mktime(&currtime);
 		timenow = timenow - 25200;//Tru di 7 tieng
 		timeOutLostSignal = 30;//seconds 
