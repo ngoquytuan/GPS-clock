@@ -433,6 +433,11 @@
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32g4xx_hal_msp.c</FilePath>
             </File>
+            <File>
+              <FileName>ntpClient.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\ntpClient.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

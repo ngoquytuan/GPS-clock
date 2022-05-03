@@ -22,12 +22,18 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include <time.h>
 #include "stdio.h"
 #include "wizchip_conf.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+time_t timenow = 1651133756;
+struct tm* timeinfo;
+uint8_t hours = 0;
+uint8_t minutes = 0;
+uint8_t seconds = 0;
 //Trang thai hoat dong cua dong ho console
 //lay thoi gian tu DS3231
 #define LOCAL 1
@@ -56,7 +62,7 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x6F},
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x5F},
 															 .ip = {192, 168, 1, 163},
 															 .sn = {255,255,255,1},
 															 .gw = {192, 168, 1, 1},
@@ -71,7 +77,11 @@ uint32_t timct=0;
 uint8_t aRxBuffer[RXBUFFERSIZE];
 															 
 extern unsigned char const LEDcode[];
-															 
+//NTP client
+extern uint16_t RetrySend ; //60 giay
+extern uint16_t sycnPeriod ;// 1 gio		
+void SNTP_init(void);		
+int8_t SNTP_run(void);															 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,20 +101,20 @@ volatile uint16_t phystatus_check_cnt;
 void console_display(void)
 {
 	uint8_t temp;
-	laythoigian();
-	temp = time[2]/10;
+	//laythoigian();
+	temp = hours/10;
 	MAX7219_SendAddrDat(0x01,LEDcode[temp]);
-	temp = time[2]%10;
+	temp = hours%10;
 	MAX7219_SendAddrDat(0x02,LEDcode[temp]);
 	
-	temp = time[1]/10;
+	temp = minutes/10;
 	MAX7219_SendAddrDat(0x03,LEDcode[temp]);
-	temp = time[1]%10;
+	temp = minutes%10;
 	MAX7219_SendAddrDat(0x04,LEDcode[temp]);
 	
-	temp = time[0]/10;
+	temp = seconds/10;
 	MAX7219_SendAddrDat(0x05,LEDcode[temp]);
-	temp = time[0]%10;
+	temp = seconds%10;
 	MAX7219_SendAddrDat(0x06,LEDcode[temp]);
 	
 }
@@ -188,7 +198,7 @@ int main(void)
 	laythoigian();
 	
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",time[2],time[1],time[0],time[3],time[4],time[5],time[6]);
+	printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6]);
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	/*
 	ghids(DS_SECOND_REG,0);
@@ -199,7 +209,10 @@ int main(void)
 	ghids(DS_MONTH_REG,4);
 	ghids(DS_YEAR_REG,22);
 	*/
-	
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	w5500_lib_init();
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	SNTP_init();
 	HAL_UART_Abort(&huart2);
 	if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
   {
@@ -207,6 +220,10 @@ int main(void)
     Error_Handler();
   }
 	HAL_TIM_Base_Start_IT(&htim3);
+	laythoigian();
+	hours   = ds3231_reg[2];
+	minutes = ds3231_reg[1];
+	seconds = ds3231_reg[0];
   while (1)
   {
     /* USER CODE END WHILE */
@@ -221,13 +238,29 @@ int main(void)
 			
 //			laythoigian();
 //			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-//			printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",time[2],time[1],time[0],time[3],time[4],time[5],time[6]);
+//			printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6]);
 //			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			//laythoigian();
 			console_display();
 			console_blink();
+			
+			RetrySend++;
+			sycnPeriod++;
+			seconds++;
+			if(seconds > 59) 
+				{
+					seconds = 0;
+					minutes++;
+					if(minutes > 59) 
+					{
+						minutes = 0;
+						hours ++;
+						if(hours > 23) hours = 0;
+					}
+				}
 		}
 		
-		
+		SNTP_run();
 		if(u2Timeout == 1) 
 			{
 				u2Timeout = 0;

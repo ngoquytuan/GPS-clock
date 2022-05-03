@@ -17,13 +17,13 @@ extern I2C_HandleTypeDef hi2c3;
 //----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
 //Phai pull up SDA SCL
 unsigned char i2c_write[1];
-char time[7],giaycu,ngay_al,thang_al,nhietdo,nhietdole;
+char ds3231_reg[7],giaycu,ngay_al,thang_al,nhietdo,nhietdole;
 unsigned char i2c_rv[19];
 void BCD_Decoder()
 {
 	//printf("i2c_rv[3]: %d",i2c_rv[3]);
-	for(char x=0;x<7;x++) time[x]=(i2c_rv[x] & 0x0f) + (i2c_rv[x]>>4)*10;
-	//time[3] --; 
+	for(char x=0;x<7;x++) ds3231_reg[x]=(i2c_rv[x] & 0x0f) + (i2c_rv[x]>>4)*10;
+	//ds3231_reg[3] --; 
 }
 unsigned char BCD_Encoder(unsigned char temp)
 {
@@ -363,7 +363,7 @@ void Net_Conf(wiz_NetInfo temp_netinfo)
 }
 void w5500_lib_init(void){
 		
-		//uint8_t tmp;
+		uint8_t tmp;
 		intr_kind temp;
 		uint8_t memsize[2][8] = {{2,2,2,2,2,2,2,2},{2,2,2,2,2,2,2,2}};	
 		
@@ -402,11 +402,11 @@ void w5500_lib_init(void){
 		//printf("...get PHY Link status");
 		/* PHY link status check */
     
-//		do
-//    {
-//       if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
-//          ;//printf("Unknown PHY Link stauts.\r\n");
-//    }while(tmp == PHY_LINK_OFF);
+		do
+    {
+       if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
+          ;//printf("Unknown PHY Link stauts.\r\n");
+    }while(tmp == PHY_LINK_OFF);
 
 		
 		//Cau hinh ngat tren Socket 0, vi can biet thoi diem ban tin NTP den!!

@@ -54,12 +54,16 @@ void SNTP_init(void);
 int8_t SNTP_run(void);
 
 extern time_t timenow;
+extern struct tm* timeinfo;
+extern uint8_t hours;
+extern uint8_t minutes;
+extern uint8_t seconds;
 
 uint8_t TimeIsSet = 0;
 uint16_t RetrySend = 0; //60 giay
 uint16_t sycnPeriod = 0;// 1 gio
 //uint8_t Domain_ntpTimeServer[] = "0.asia.pool.ntp.org";    // for Example domain name
-uint8_t Domain_ntpTimeServer[] = "time.windows.com";
+//uint8_t Domain_ntpTimeServer[] = "time.windows.com";
 //uint8_t Domain_IP[4]  = {0, };               // Translated IP address by DNS
 #define DNS_BUF_SIZE   200
 uint8_t ntpTimeServer_buf[DNS_BUF_SIZE];
@@ -163,6 +167,16 @@ int8_t SNTP_run(void)//datetime sntp;
 			timenow = sec-seventyYears;
 			
 			printf("\r\nSynced with ntp server, seconds: %u\r\n",timenow);
+			timeinfo = localtime( &timenow );
+			asctime(timeinfo);
+			#ifdef			ntpClientDebug
+			printf("Current local time and date: %s\r\n", asctime(timeinfo));
+		  printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
+		  printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
+			#endif
+			hours = timeinfo->tm_hour;
+			minutes = timeinfo->tm_min;
+			seconds = timeinfo->tm_sec;
 			TimeIsSet = 1;
 			close(SOCK_SNTP);
 

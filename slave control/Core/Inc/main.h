@@ -53,7 +53,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-extern char time[7];
+extern char ds3231_reg[7];
 void loadValue(void);
 void storeValue(void);
 void w5500_lib_init(void);
