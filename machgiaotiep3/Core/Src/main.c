@@ -73,9 +73,9 @@ struct tm* timeinfo;
 
 uint32_t	_loop1=0;
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x6F},
-															 .ip = {192, 168, 1, 163},
+															 .ip = {192, 168, 22, 163},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 1, 1},
+															 .gw = {192, 168, 22, 1},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 
