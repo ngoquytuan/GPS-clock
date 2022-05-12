@@ -31,7 +31,18 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+//Chon 1 trong 3 loai
+//#define SLAVE_WALL
+#define SLAVE_CONSOLE
+//#define SLAVE_MATRIX
+#ifdef SLAVE_WALL
+	#ifdef SLAVE_CONSOLE
+	ERROR: Loi roi
+	#endif
+	#ifdef SLAVE_MATRIX
+	ERROR: Loi roi
+	#endif
+#endif
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -53,15 +64,57 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-extern char ds3231_reg[7];
+
+#define SIGNAL_FROM_MASTER_OK   1
+#define SIGNAL_FROM_MASTER_BAD  0
+
+//Trang thai hoat dong cua dong ho console
+//lay thoi gian tu DS3231
+#define LOCAL 1
+//Lay thoi gian tu dong ho master ( co dong bo)
+#define GPS   0
+
+#define STABE_NUMBER 				30
+#define HAVE_SIGNAL 				1
+#define NO_SIGNAL 				  0
+
+#define RTC_FINE 						2	
+#define RTC_OUT_OF_BATTERY 	1
+#define NO_RTC 							0
+typedef struct{
+
+  uint8_t work_mode;
+	uint8_t rs458_connection;
+	uint8_t ntp_client_status;
+	uint8_t ethernet_connection;
+	uint8_t rtc_status; 
+	uint8_t sync_status; 
+} slave_status;
+extern char ds3231_reg[7],nhietdo;
+extern slave_status slave_clock;
+extern uint8_t days;
+extern uint8_t months;
+extern uint8_t years;
+extern uint8_t hours;
+extern uint8_t minutes;
+extern uint8_t seconds;
+
 void loadValue(void);
 void storeValue(void);
 void w5500_lib_init(void);
 void checklink(void);
 void MAX7219_Init (void);
 void MAX7219_SendAddrDat (unsigned char addr,unsigned char dat);
-
-
+void display_init_check(void);
+void console_blink(void);
+void console_display(void);
+void RTC_factory_RST(void);
+#ifdef SLAVE_WALL
+void MAX7219_Init2 (void);
+void MAX7219_SendAddrDat2 (unsigned char addr,unsigned char dat);
+void day_display(void);
+#endif
+//define for DS3231
 #define DS_SECOND_REG 0
 #define DS_MIN_REG 1
 #define DS_HOUR_REG 2
@@ -70,7 +123,16 @@ void MAX7219_SendAddrDat (unsigned char addr,unsigned char dat);
 #define DS_MONTH_REG 5
 #define DS_YEAR_REG 6
 
-
+#ifdef SLAVE_WALL
+	#define DAY1 1
+	#define DAY2 2
+	#define MON1 3
+	#define MON2 4
+	#define YEA1 5
+	#define YEA2 6
+	#define YEA3 7
+	#define YEA4 8
+#endif
 void laythoigian(void);
 void ghids(unsigned char add, unsigned char dat);
 /* USER CODE END EFP */
@@ -92,6 +154,9 @@ void ghids(unsigned char add, unsigned char dat);
 #define FR_Pin GPIO_PIN_12
 #define FR_GPIO_Port GPIOB
 #define FR_EXTI_IRQn EXTI15_10_IRQn
+#define SQW_Pin GPIO_PIN_8
+#define SQW_GPIO_Port GPIOA
+#define SQW_EXTI_IRQn EXTI9_5_IRQn
 #define LED_Pin GPIO_PIN_15
 #define LED_GPIO_Port GPIOA
 #define CLK2_Pin GPIO_PIN_10

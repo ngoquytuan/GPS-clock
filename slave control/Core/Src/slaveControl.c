@@ -9,6 +9,7 @@ static uint32_t GetBank(uint32_t Address);
 #define MSEC_PHYSTATUS_CHECK 		1000		// msec
 #define PHYStatus_check_enable 1
 
+
 extern wiz_NetInfo myipWIZNETINFO;
 extern volatile uint16_t phystatus_check_cnt;
 extern SPI_HandleTypeDef hspi1;
@@ -31,14 +32,29 @@ unsigned char BCD_Encoder(unsigned char temp)
 }
 void laythoigian(void)
 {
-	HAL_I2C_Mem_Read(&hi2c3,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,i2c_rv,19,1000); //read time
+	//HAL_I2C_Mem_Read(&hi2c3,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,i2c_rv,19,1000); //read time
+	if( HAL_I2C_Mem_Read(&hi2c3,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,i2c_rv,19,1000) == HAL_ERROR) 
+		{
+			slave_clock.rtc_status = NO_RTC;
+			//printf("NO RTC");
+			return;
+		}
+	
 	BCD_Decoder(); //chuyen doi
-	nhietdo = i2c_rv[17];
-	nhietdole = i2c_rv[18]>>6;
-	if(nhietdole == 1) nhietdole = 25;
-	else if(nhietdole == 2) nhietdole = 5;
-	else if(nhietdole == 3) nhietdole = 75;
-	else nhietdole = 0;
+	
+//	nhietdo = i2c_rv[14];
+//	nhietdole = i2c_rv[18]>>6;
+//	if(nhietdole == 1) nhietdole = 25;
+//	else if(nhietdole == 2) nhietdole = 5;
+//	else if(nhietdole == 3) nhietdole = 75;
+//	else nhietdole = 0;
+	
+	hours   = ds3231_reg[2];
+	minutes = ds3231_reg[1];
+	seconds = ds3231_reg[0];
+	days		= ds3231_reg[4];
+	months  = ds3231_reg[5]; 
+	years   = ds3231_reg[6];
 }
 void ghids(unsigned char add, unsigned char dat)
 {
@@ -86,7 +102,19 @@ void checklink(void)
 				phystatus_check_cnt = 0;
 			}
 }
-
+//Trong truong hop RTC ko chay, goi ham nay de cau hinh lai RTC
+void RTC_factory_RST(void)
+	{
+		ghids(14,0);//1HZ out SQW
+		ghids(DS_SECOND_REG,0);
+		ghids(DS_MIN_REG,37);
+		ghids(DS_HOUR_REG,15);
+		ghids(DS_DAY_REG,6);
+		ghids(DS_DATE_REG,6);
+		ghids(DS_MONTH_REG,5);
+		ghids(DS_YEAR_REG,22);
+	}
+	
 void factoryRST(void)
 	{
 		
@@ -402,11 +430,11 @@ void w5500_lib_init(void){
 		//printf("...get PHY Link status");
 		/* PHY link status check */
     
-		do
-    {
-       if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
-          ;//printf("Unknown PHY Link stauts.\r\n");
-    }while(tmp == PHY_LINK_OFF);
+//		do
+//    {
+//       if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
+//          ;//printf("Unknown PHY Link stauts.\r\n");
+//    }while(tmp == PHY_LINK_OFF);
 
 		
 		//Cau hinh ngat tren Socket 0, vi can biet thoi diem ban tin NTP den!!
