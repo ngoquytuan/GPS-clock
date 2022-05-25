@@ -92,8 +92,8 @@ uint8_t gps1_stt = 0;
 uint8_t gps2_stt = 0;
 uint8_t power1_stt = 0;
 uint8_t power2_stt = 0;
-uint8_t SNMPmanagerIP[4] ={192, 168, 22, 164};
-uint8_t SNMPagentIP[4]   ={192, 168, 22, 164};
+uint8_t SNMPmanagerIP[4] ={192, 168, 6, 164};
+uint8_t SNMPagentIP[4]   ={192, 168, 6, 164};
 
 uint8_t days = 0;
 uint8_t months = 0;
@@ -266,11 +266,30 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+				main_message_handle();
+				
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
 		if( (ret = NTPUDP()) < 0) {
 				printf("SOCKET ERROR : %d\r\n", ret);
 				NVIC_SystemReset();
 		}
-		
+		if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+				main_message_handle();
+				
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
 		{	//SNMPv1 run
 			//Run SNMP Agent Fucntion
 			/* SNMP Agent Handler */
@@ -288,14 +307,43 @@ int main(void)
 			snmpd_run2();
 			
 		}
-		
+		if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+				main_message_handle();
+				
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
 		// web server 	
 			httpServer_run(0);
 			httpServer_run(1);
 			httpServer_run(2);
-		
+		if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+				main_message_handle();
+				
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
 		SNTP_run();
-		if(timct > 1000) {
+		if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+				main_message_handle();
+				
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
+			
+			if(timct > 1000) {
 			timct = 0;
 			timenow++;
 			count_to_send_main++;
@@ -375,8 +423,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
   {
@@ -1002,7 +1050,7 @@ void main_message_handle(void)
 	{
 		//Truyen ban tin cho cac dong ho slave
 		HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
-		HAL_UART_Transmit(&huart1, aRxBuffer, 22, 100);
+		HAL_UART_Transmit(&huart1, aRxBuffer, 20, 100);
 		HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
 		/*Truyen gia tri gui len web server*/
 		//If there is not GPS master message, no time on webserver

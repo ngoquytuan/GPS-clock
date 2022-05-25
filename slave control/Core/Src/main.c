@@ -45,7 +45,7 @@ uint8_t rtc_timeout = 30;
 int8_t haveSignalFromRS485 = NO_SIGNAL;
 int8_t stableSignal = SIGNAL_FROM_MASTER_BAD;
 int8_t count_Stable_signal = 0;
-int8_t timeOutLostSignal = 30;
+int8_t timeOutLostSignal = 0;
 //Thoi gian luu gio tu RS485 vao RTC
 int16_t timeSaveRS485_to_RTC = 3600;
 /* USER CODE END PTD */
@@ -72,17 +72,17 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 #ifdef SLAVE_WALL
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x6F},
-															 .ip = {192, 168, 1, 101},
+															 .ip = {192, 168, 6, 101},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 1, 1},
+															 .gw = {192, 168, 6, 1},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 #endif
 #ifdef SLAVE_CONSOLE
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x5F},
-															 .ip = {192, 168, 1, 99},
+															 .ip = {192, 168, 6, 99},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 1, 1},
+															 .gw = {192, 168, 6, 1},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 #endif
@@ -120,6 +120,24 @@ volatile uint16_t phystatus_check_cnt;
 
 
 void main_message_handle(void);
+void uart2_processing(void)
+{
+	if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+				//main_message_handle();
+				//Truyen ban tin cho cac dong ho slave
+				//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+				//HAL_UART_Transmit(&huart2, aRxBuffer, 20, 100);
+				main_message_handle();
+				//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
+}
 /* USER CODE END 0 */
 
 /**
@@ -207,18 +225,22 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		uart2_processing();
 		if(timct > 990) {
 			timct = 0;
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-			HAL_Delay(50);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-			HAL_Delay(50);
+//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+//			HAL_Delay(50);
+//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+//			HAL_Delay(50);
 			
 //			laythoigian();
 //			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 //			printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6]);
 //			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 			//laythoigian();
+			if(timeOutLostSignal) timeOutLostSignal--;
+			else haveSignalFromRS485 = NO_SIGNAL;
+			
 			if(haveSignalFromRS485 == NO_SIGNAL)
 			{
 #ifdef SLAVE_WALL			
@@ -260,23 +282,11 @@ int main(void)
 				slave_clock.rtc_status = RTC_FINE;
 			}
 		}
+		uart2_processing();
 		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 		SNTP_run();
 		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-		if(u2Timeout == 1) 
-			{
-				u2Timeout = 0;
-				//main_message_handle();
-				//Truyen ban tin cho cac dong ho slave
-				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-				//HAL_UART_Transmit(&huart2, aRxBuffer, 20, 100);
-				main_message_handle();
-				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-				//printf("aRxBuffer %s; \r\n",aRxBuffer);
-				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
-				huart2.RxXferCount = RXBUFFERSIZE;
-				memset(aRxBuffer,0,RXBUFFERSIZE);
-			}
+		uart2_processing();
   }
   /* USER CODE END 3 */
 }
@@ -317,8 +327,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
@@ -342,7 +352,7 @@ static void MX_I2C3_Init(void)
 
   /* USER CODE END I2C3_Init 1 */
   hi2c3.Instance = I2C3;
-  hi2c3.Init.Timing = 0x10707DBC;
+  hi2c3.Init.Timing = 0x20A0C4DF;
   hi2c3.Init.OwnAddress1 = 0;
   hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -651,9 +661,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if (GPIO_Pin == FR_Pin)
   {
 		//factory reset
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-		printf("Factory reset\r\n");
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+//		printf("Factory reset\r\n");
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
   }
 	if (GPIO_Pin == SQW_Pin)
   {
@@ -717,7 +727,12 @@ void main_message_handle(void)
 		minutes = 10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
 		seconds = 10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
 		
-		
+		//Hien thi ngay khi co dong bo sang
+		console_display();
+		console_blink();
+		#ifdef SLAVE_WALL			
+			day_display();
+		#endif
 		
 		/*Cap nhap thoi gian NTP*/
 		currtime.tm_year = 100+ years;//100+10*convert_atoi(aRxBuffer[14])+convert_atoi(aRxBuffer[15]);//In fact: 2000+xxx-1900
@@ -729,10 +744,11 @@ void main_message_handle(void)
 		currtime.tm_hour = hours;//10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5]);
 		
 		timenow = mktime(&currtime);
-		timenow = timenow - 25200;//Tru di 7 tieng
+		//timenow = timenow - 25200;//Tru di 7 tieng
 		
 		
 		haveSignalFromRS485 = HAVE_SIGNAL;
+		timeOutLostSignal = 10;
 		
 	  if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
 		if(count_Stable_signal >= STABE_NUMBER) 
@@ -754,12 +770,7 @@ void main_message_handle(void)
 			ghids(DS_MONTH_REG,months);
 			ghids(DS_YEAR_REG,years);
 		}
-		//Hien thi ngay khi co dong bo sang
-		console_display();
-		console_blink();
-		#ifdef SLAVE_WALL			
-			day_display();
-		#endif
+		
 		
 		#ifdef _U1_DEBUG_ENABLE_
 		printf("new timestamp:%d, %d\r\n",timenow, timeOutLostSignal);

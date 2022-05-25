@@ -32,8 +32,8 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 //Chon 1 trong 3 loai
-#define SLAVE_WALL
-//#define SLAVE_CONSOLE
+//#define SLAVE_WALL
+#define SLAVE_CONSOLE
 //#define SLAVE_MATRIX
 #ifdef SLAVE_WALL
 	#ifdef SLAVE_CONSOLE

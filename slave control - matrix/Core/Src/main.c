@@ -112,6 +112,22 @@ volatile uint16_t phystatus_check_cnt;
 
 
 void main_message_handle(void);
+void uart2_processing(void)
+{
+	if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+				//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+				//HAL_UART_Transmit(&huart2, aRxBuffer, 20, 100);
+				main_message_handle();
+				//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+			}
+}
 /* USER CODE END 0 */
 
 /**
@@ -210,17 +226,18 @@ int main(void)
 	
   while (1)
   {
-    HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
+    //HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
+		//HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		uart2_processing();
 		if(timct > 990) {
 			timct = 0;
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-			HAL_Delay(50);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-			HAL_Delay(50);
+//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+//			HAL_Delay(50);
+//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+//			HAL_Delay(50);
 			
 			//laythoigian();
 			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
@@ -229,6 +246,7 @@ int main(void)
 			
 			if(timeOutLostSignal) timeOutLostSignal--;
 			else haveSignalFromRS485 = NO_SIGNAL;
+			
 			if(haveSignalFromRS485 == NO_SIGNAL)
 			{
 			
@@ -267,23 +285,9 @@ int main(void)
 			}
 			
 		}
-		
-		//SNTP_run();
-		if(u2Timeout == 1) 
-			{
-				u2Timeout = 0;
-				//main_message_handle();
-				
-				//Truyen ban tin cho cac dong ho slave
-				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-				//HAL_UART_Transmit(&huart2, aRxBuffer, 20, 100);
-				main_message_handle();
-				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-				//printf("aRxBuffer %s; \r\n",aRxBuffer);
-				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
-				huart2.RxXferCount = RXBUFFERSIZE;
-				memset(aRxBuffer,0,RXBUFFERSIZE);
-			}
+		uart2_processing();
+		SNTP_run();
+		uart2_processing();
   }
   /* USER CODE END 3 */
 }
@@ -684,9 +688,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if (GPIO_Pin == FR_Pin)
   {
 		//factory reset
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-		printf("Factory reset\r\n");
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+//		printf("Factory reset\r\n");
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
   }
 	if (GPIO_Pin == SQW_Pin)
   {
@@ -759,6 +763,8 @@ void main_message_handle(void)
 		minutes = 10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
 		seconds = 10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
 		
+		load_line2(hours,minutes,seconds,1);
+		scan_5down();
 		
 		
 		/*Cap nhap thoi gian NTP*/
@@ -796,13 +802,13 @@ void main_message_handle(void)
 			ghids(DS_MONTH_REG,months);
 			ghids(DS_YEAR_REG,years);
 		}
-		
+		load_line1(days,months,years);
+		scan_7up();
 		
 		#ifdef _U1_DEBUG_ENABLE_
 		printf("new timestamp:%d, %d\r\n",timenow, timeOutLostSignal);
 		timeinfo = localtime( &timenow );
 		printf("Current local time and date: %s\r\n", asctime(timeinfo));
-		
 		#endif
 		//Update last sync NTP time server field!
 //		unixTime_last_sync = timenow + STARTOFTIME;

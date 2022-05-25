@@ -271,7 +271,7 @@ void USART2_IRQHandler(void)
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */
-  if (HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_RX) u2Timeout=50;
+  if (HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_RX) {u2Timeout=50;HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);}
   /* USER CODE END USART2_IRQn 1 */
 }
 
