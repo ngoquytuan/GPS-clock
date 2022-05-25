@@ -110,7 +110,7 @@ void RTC_factory_RST(void)
 		ghids(DS_MIN_REG,37);
 		ghids(DS_HOUR_REG,15);
 		ghids(DS_DAY_REG,6);
-		ghids(DS_DATE_REG,6);
+		ghids(DS_DATE_REG,13);
 		ghids(DS_MONTH_REG,5);
 		ghids(DS_YEAR_REG,22);
 	}

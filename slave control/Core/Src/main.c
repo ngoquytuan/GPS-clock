@@ -72,17 +72,17 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 #ifdef SLAVE_WALL
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x6F},
-															 .ip = {192, 168, 22, 163},
+															 .ip = {192, 168, 1, 101},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 22, 252},
+															 .gw = {192, 168, 1, 1},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 #endif
 #ifdef SLAVE_CONSOLE
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x08, 0xDC,0x4F, 0xEB, 0x5F},
-															 .ip = {192, 168, 22, 163},
+															 .ip = {192, 168, 1, 99},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 22, 252},
+															 .gw = {192, 168, 1, 1},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 #endif
@@ -182,9 +182,9 @@ int main(void)
 	
   //RTC_factory_RST();
 	
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 	w5500_lib_init();
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	SNTP_init();
 	HAL_UART_Abort(&huart2);
 	if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
@@ -260,8 +260,9 @@ int main(void)
 				slave_clock.rtc_status = RTC_FINE;
 			}
 		}
-		
-		//SNTP_run();
+		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+		SNTP_run();
+		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 		if(u2Timeout == 1) 
 			{
 				u2Timeout = 0;

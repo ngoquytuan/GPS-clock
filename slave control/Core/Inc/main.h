@@ -32,8 +32,8 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 //Chon 1 trong 3 loai
-//#define SLAVE_WALL
-#define SLAVE_CONSOLE
+#define SLAVE_WALL
+//#define SLAVE_CONSOLE
 //#define SLAVE_MATRIX
 #ifdef SLAVE_WALL
 	#ifdef SLAVE_CONSOLE
@@ -64,6 +64,12 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+//Max7219
+#define decodeMode  0x09
+#define intensity   0x0A
+#define scanLimit   0x0B
+#define shut_down   0x0C
+#define disTest     0x0F
 
 #define SIGNAL_FROM_MASTER_OK   1
 #define SIGNAL_FROM_MASTER_BAD  0

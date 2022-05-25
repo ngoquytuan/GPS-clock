@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "socket.h"
-
+#include "main.h"
 
 //#define ntpClientDebug
 #define	MAX_SNTP_BUF_SIZE	sizeof(ntpformat)		///< maximum size of DNS buffer. */
@@ -58,6 +58,9 @@ extern struct tm* timeinfo;
 extern uint8_t hours;
 extern uint8_t minutes;
 extern uint8_t seconds;
+extern uint8_t days;
+extern uint8_t months;
+extern uint8_t years ;
 
 uint8_t TimeIsSet = 0;
 uint16_t RetrySend = 0; //60 giay
@@ -69,8 +72,8 @@ uint16_t sycnPeriod = 0;// 1 gio
 uint8_t ntpTimeServer_buf[DNS_BUF_SIZE];
 
 //uint8_t ntpTimeServer_ip[4] ={103, 123, 108, 222};// NTP time server
-uint8_t ntpTimeServer_ip[4] ={139, 199, 215, 251};// NTP time server
-//uint8_t ntpTimeServer_ip[4] ={192, 168, 1, 7};// NTP time server
+//uint8_t ntpTimeServer_ip[4] ={139, 199, 215, 251};// NTP time server
+uint8_t ntpTimeServer_ip[4] ={192, 168, 1, 100};// NTP time server
 //uint8_t ntpTimeServer_buf[56];
 uint8_t ntpmessage[48]={0};
 //uint8_t ntpServerRespond[56];
@@ -139,7 +142,7 @@ int8_t SNTP_run(void)//datetime sntp;
 	//uint16_t startindex = 40; //last 8-byte of data_buf[size is 48 byte] is xmt, so the startindex should be 40
 	int8_t i;
 	uint32_t sec;
-	if (sycnPeriod >= 200) // dong bo lai thoi gian
+	if (sycnPeriod >= 20) // dong bo lai thoi gian
 	{
 		TimeIsSet = 0;
 		sycnPeriod = 0;
@@ -164,7 +167,7 @@ int8_t SNTP_run(void)//datetime sntp;
 //						}
 			sec = (ntpTimeServer_buf[40]<<24) + (ntpTimeServer_buf[41]<<16) + (ntpTimeServer_buf[42]<<8) + ntpTimeServer_buf[43] ;
 			//printf("Seconds: %u\r\n",sec-seventyYears);
-			timenow = sec-seventyYears;
+			timenow = 7*3600+ sec - seventyYears;
 			
 			printf("\r\nSynced with ntp server, seconds: %u\r\n",timenow);
 			timeinfo = localtime( &timenow );
@@ -174,9 +177,23 @@ int8_t SNTP_run(void)//datetime sntp;
 		  printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
 		  printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
 			#endif
+			days = timeinfo->tm_mday;
+      months = 1+timeinfo->tm_mon;
+      years = timeinfo->tm_year-100;
 			hours = timeinfo->tm_hour;
 			minutes = timeinfo->tm_min;
 			seconds = timeinfo->tm_sec;
+			
+			slave_clock.sync_status = GPS;
+			ghids(14,0);//1HZ out SQW
+			ghids(DS_SECOND_REG,seconds);
+			ghids(DS_MIN_REG,minutes);
+			ghids(DS_HOUR_REG,hours);
+			//ghids(DS_DAY_REG,6);
+			ghids(DS_DATE_REG,days);
+			ghids(DS_MONTH_REG,months);
+			ghids(DS_YEAR_REG,years);
+		
 			TimeIsSet = 1;
 			close(SOCK_SNTP);
 

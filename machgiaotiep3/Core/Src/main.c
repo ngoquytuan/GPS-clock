@@ -73,9 +73,9 @@ struct tm* timeinfo;
 
 uint32_t	_loop1=0;
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x09, 0xDC,0x4F, 0xEB, 0x6F},
-															 .ip = {192, 168, 1, 100},
+															 .ip = {192, 168, 6, 100},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 1, 1},
+															 .gw = {192, 168, 6, 1},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 
@@ -227,7 +227,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	
-	SNTP_init();
+	//SNTP_init();
 	
 	printf("Run\r\n");
 	unixTime_last_sync = timenow;
@@ -313,20 +313,18 @@ int main(void)
 			
 			
 		}
-		if(count_to_send_main > 59)
+		//sau bao lau thi gui thong tin cho mach main?
+		if(count_to_send_main > 5)
 		{
 			count_to_send_main = 0;
 			//printf("IP:%02X.%02X.%02X.%02X\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
-			printf("IP %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+			printf("IP :%d.%d.%d.%d",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
 		}
 		if(u2Timeout == 1) 
 			{
 				u2Timeout = 0;
 				main_message_handle();
-				//Truyen ban tin cho cac dong ho slave
-				HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
-				HAL_UART_Transmit(&huart1, aRxBuffer, 20, 100);
-				HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
+				
 				//printf("aRxBuffer %s; \r\n",aRxBuffer);
 				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
 				huart2.RxXferCount = RXBUFFERSIZE;
@@ -800,7 +798,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if (GPIO_Pin == PPS_Pin)
   {
 		//HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
-		printf("PPS\r\n");
+		//printf("PPS\r\n");
 		//fractionOfSecond = 0;
   }
 	if (GPIO_Pin == INTn_Pin)
@@ -971,11 +969,23 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
   
 			if(UartHandle == &huart1) 
 			{
-				printf("U1 full\r\n");
+				//printf("U1 full\r\n");
+				HAL_UART_Abort(&huart1);
+				if (HAL_UART_Receive_IT(&huart1, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+				{
+					/* Transfer error in reception process */
+					Error_Handler();
+				}
 			}
 			if(UartHandle == &huart2) 
 			{
-				printf("U2 full\r\n");
+				//printf("U2 full\r\n");
+				HAL_UART_Abort(&huart2);
+				if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+				{
+					/* Transfer error in reception process */
+					Error_Handler();
+				}
 			}
 				        
 }
@@ -990,6 +1000,10 @@ void main_message_handle(void)
 {//=> Ban tin GPS: $GPS034007060819AA10	;$$GPS091259280422AA10
 	if((aRxBuffer[0] =='$')&((aRxBuffer[1] =='G')|(aRxBuffer[1] =='g'))&((aRxBuffer[2] =='P')|(aRxBuffer[2] =='p'))&((aRxBuffer[3] =='S')|(aRxBuffer[3] =='s')))
 	{
+		//Truyen ban tin cho cac dong ho slave
+		HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
+		HAL_UART_Transmit(&huart1, aRxBuffer, 22, 100);
+		HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
 		/*Truyen gia tri gui len web server*/
 		//If there is not GPS master message, no time on webserver
 		days 		= 10*convert_atoi(aRxBuffer[10])+convert_atoi(aRxBuffer[11]);
@@ -1013,7 +1027,7 @@ void main_message_handle(void)
 		currtime.tm_hour = hours;//10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5]);
 		
 		timenow = mktime(&currtime);
-		timenow = timenow - 25200;//Tru di 7 tieng
+		//timenow = timenow - 25200;//Tru di 7 tieng
 		timeOutLostSignal = 30;//seconds 
 		lostSignal = GPS_MASTER_OK;
 		

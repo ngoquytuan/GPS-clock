@@ -3,7 +3,7 @@
 #include "stdio.h"
 #include "wizchip_conf.h"
 #include "storevalue.h"
-
+#include "w5500.h"
 ///////////////////////////////////////////////////////////////////////
 // PHYStatus check ////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
@@ -329,7 +329,16 @@ void Net_Conf(wiz_NetInfo temp_netinfo)
 	};
 	*/
 	ctlnetwork(CN_SET_NETINFO, (void*) &temp_netinfo);
-
+  
+	setSn_TTL(0,255);
+	setSn_TTL(1,255);
+	setSn_TTL(2,255);
+	setSn_TTL(3,255);
+	setSn_TTL(4,255);
+	setSn_TTL(5,255);
+	setSn_TTL(6,255);
+	setSn_TTL(7,255);
+	
 	Display_Net_Conf();
 }
 void w5500_lib_init(void){
