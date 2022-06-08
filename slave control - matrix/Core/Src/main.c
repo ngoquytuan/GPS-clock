@@ -29,6 +29,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+#define fractionOfSecond TIM4->CNT
+uint16_t t1,t2,t3,t4;
 slave_status slave_clock;
 time_t timenow = 1651133756;
 struct tm* timeinfo;
@@ -47,7 +49,7 @@ int8_t stableSignal = SIGNAL_FROM_MASTER_BAD;
 int8_t count_Stable_signal = 0;
 int8_t timeOutLostSignal = 0;
 //Thoi gian luu gio tu RS485 vao RTC
-int16_t timeSaveRS485_to_RTC = 3600;
+int16_t timeSaveRS485_to_RTC = 60;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -72,9 +74,9 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 
 wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x18, 0xDC,0x4F, 0xEB, 0x6F},
-															 .ip = {192, 168, 7, 103},
+															 .ip = {192, 168, 22, 163},
 															 .sn = {255,255,255,1},
-															 .gw = {192, 168, 7, 1},
+															 .gw = {192, 168, 22, 252},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
 
@@ -85,10 +87,11 @@ uint32_t timct=0;
 /* Buffer used for reception */
 uint8_t aRxBuffer[RXBUFFERSIZE];
 															 
-extern unsigned char const LEDcode[];
+
 //NTP client
 extern uint16_t RetrySend ; //60 giay
 extern uint16_t sycnPeriod ;// 1 gio
+extern uint8_t LEDintensity;
 //extern uint8_t console_stt;															 
 void SNTP_init(void);		
 int8_t SNTP_run(void);															 
@@ -182,9 +185,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	
+	LEDintensity = 1;
 	up7_matrix_init();
-	
 	line2_matrix_init();
 	
   
@@ -214,6 +216,7 @@ int main(void)
     Error_Handler();
   }
 	HAL_TIM_Base_Start_IT(&htim3);
+	HAL_TIM_Base_Start_IT(&htim4);
 	//laythoigian();
 /** Cac che do hoat dong cua dong ho slave
 	*  Hoat dong theo RTC hoac NTP client hoac RS485
@@ -226,14 +229,19 @@ int main(void)
 	
   while (1)
   {
-    //HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
+    t1 = fractionOfSecond;
+		//HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 		//HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 		uart2_processing();
+		//t2 = fractionOfSecond-t1;
 		if(timct > 990) {
 			timct = 0;
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			//printf("t: %d,%d,%d,%d \r\n" ,t1,t2,t3,t4);
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 //			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 //			HAL_Delay(50);
 //			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
@@ -269,7 +277,8 @@ int main(void)
 					slave_clock.sync_status = LOCAL;
 				}
 			
-			if((timeSaveRS485_to_RTC > 1) && (stableSignal == SIGNAL_FROM_MASTER_OK)) timeSaveRS485_to_RTC --;
+			//if((timeSaveRS485_to_RTC > 1) && (stableSignal == SIGNAL_FROM_MASTER_OK)) timeSaveRS485_to_RTC --;
+				if((timeSaveRS485_to_RTC > 1)) timeSaveRS485_to_RTC --;
 			
 			if(rtc_timeout > 1) rtc_timeout --;
 			if(rtc_timeout == 1) 
@@ -285,8 +294,12 @@ int main(void)
 			}
 			
 		}
+		//t3 = fractionOfSecond-t2;
 		uart2_processing();
+		//t4 = fractionOfSecond-t3;
+		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 		SNTP_run();
+		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 		uart2_processing();
   }
   /* USER CODE END 3 */
@@ -691,9 +704,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 //		printf("Factory reset\r\n");
 //		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+		chinhdosang();
+		
   }
 	if (GPIO_Pin == SQW_Pin)
   {
+		//t4 = fractionOfSecond;
+		//Dong bo lai phan le cua giay
+		fractionOfSecond = 0;
 		//RTC second
 //		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 //		printf("RTC\r\n");
@@ -706,21 +724,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 				seconds++;
 				if(seconds > 59) 
 				{
-				//					seconds = 0;
-				//					minutes++;
-				//					if(minutes > 59) 
-				//					{
-				//						minutes = 0;
-				//						hours ++;
-				//						if(hours > 23) hours = 0;
-				//					}
 									//Moi phut se dong bo thoi gian voi RTC mot lan
 									laythoigian();
 				}
 			}
-			
-		load_line2(hours,minutes,seconds,1);
-		scan_5down();
+			load_line1(days,months,years);
+			scan_7up();
+			load_line2(hours,minutes,seconds,1);
+			scan_5down();
   }
 
 }
@@ -762,10 +773,10 @@ void main_message_handle(void)
 		hours 	= 10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5])  ;//UTC
 		minutes = 10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
 		seconds = 10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
-		
+		/*
 		load_line2(hours,minutes,seconds,1);
 		scan_5down();
-		
+		*/
 		
 		/*Cap nhap thoi gian NTP*/
 		currtime.tm_year = 100+ years;//100+10*convert_atoi(aRxBuffer[14])+convert_atoi(aRxBuffer[15]);//In fact: 2000+xxx-1900
@@ -791,7 +802,8 @@ void main_message_handle(void)
 			
 		if(timeSaveRS485_to_RTC == 1)
 		{
-			timeSaveRS485_to_RTC = 3600;
+			//seconds++;
+			timeSaveRS485_to_RTC = 60*5;
 			//sync rs485 time to RTC 
 			ghids(14,0);//1HZ out SQW
 			ghids(DS_SECOND_REG,seconds);
@@ -802,9 +814,10 @@ void main_message_handle(void)
 			ghids(DS_MONTH_REG,months);
 			ghids(DS_YEAR_REG,years);
 		}
+		/*
 		load_line1(days,months,years);
 		scan_7up();
-		
+		*/
 		#ifdef _U1_DEBUG_ENABLE_
 		printf("new timestamp:%d, %d\r\n",timenow, timeOutLostSignal);
 		timeinfo = localtime( &timenow );

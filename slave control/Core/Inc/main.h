@@ -32,14 +32,11 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 //Chon 1 trong 3 loai
-//#define SLAVE_WALL
-#define SLAVE_CONSOLE
-//#define SLAVE_MATRIX
+#define SLAVE_WALL
+//#define SLAVE_CONSOLE
+
 #ifdef SLAVE_WALL
 	#ifdef SLAVE_CONSOLE
-	ERROR: Loi roi
-	#endif
-	#ifdef SLAVE_MATRIX
 	ERROR: Loi roi
 	#endif
 #endif
@@ -80,7 +77,7 @@ void Error_Handler(void);
 //Lay thoi gian tu dong ho master ( co dong bo)
 #define GPS   0
 
-#define STABE_NUMBER 				30
+#define STABE_NUMBER 				10
 #define HAVE_SIGNAL 				1
 #define NO_SIGNAL 				  0
 
@@ -115,6 +112,7 @@ void display_init_check(void);
 void console_blink(void);
 void console_display(void);
 void RTC_factory_RST(void);
+void chinhdosang(void);
 #ifdef SLAVE_WALL
 void MAX7219_Init2 (void);
 void MAX7219_SendAddrDat2 (unsigned char addr,unsigned char dat);

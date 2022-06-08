@@ -1,5 +1,5 @@
 #include "main.h"
-
+uint8_t LEDintensity;
 uint8_t blynk = 0;
 //uint8_t console_stt = GPS;
 
@@ -12,7 +12,7 @@ unsigned char i;
 		else HAL_GPIO_WritePin(LED_DIN_GPIO_Port, LED_DIN_Pin, GPIO_PIN_RESET);//GPIO_ResetBits(GPIOA, MAX7219_DIN);
 
 		HAL_GPIO_WritePin(LED_CLK_GPIO_Port, LED_CLK_Pin, GPIO_PIN_RESET);//GPIO_ResetBits(GPIOA, MAX7219_CLK);
-		HAL_Delay(1);
+		//HAL_Delay(1);
 		HAL_GPIO_WritePin(LED_CLK_GPIO_Port, LED_CLK_Pin, GPIO_PIN_SET);//GPIO_SetBits(GPIOA, MAX7219_CLK);
 		dat<<=1;
 	}
@@ -28,16 +28,16 @@ HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);//GPIO_SetBits
 
 void MAX7219_Init (void)
 {
-MAX7219_SendAddrDat (0x0c,0x01); //normal operation
+MAX7219_SendAddrDat (shut_down,0x01); //normal operation
 #ifdef SLAVE_CONSOLE
-	MAX7219_SendAddrDat (0x0a,0x01); //intensity
+	MAX7219_SendAddrDat (intensity,0x01); //intensity
 #endif
 #ifdef SLAVE_WALL
-	MAX7219_SendAddrDat (0x0a,0x05); //intensity
+	MAX7219_SendAddrDat (intensity,0x05); //intensity
 #endif
-MAX7219_SendAddrDat (0x0b,0x07); //all digits on
-MAX7219_SendAddrDat (0x09,0x00); //decoding
-MAX7219_SendAddrDat (0x0f,0x00); //display test off
+MAX7219_SendAddrDat (scanLimit,0x07); //all digits on
+MAX7219_SendAddrDat (decodeMode,0x00); //decoding
+MAX7219_SendAddrDat (disTest,0x00); //display test off
 }
 
 void MAX7219_Clear(void)
@@ -84,7 +84,7 @@ unsigned char i;
 		else HAL_GPIO_WritePin(DIN2_GPIO_Port, DIN2_Pin, GPIO_PIN_RESET);//GPIO_ResetBits(GPIOA, MAX7219_DIN);
 
 		HAL_GPIO_WritePin(CLK2_GPIO_Port, CLK2_Pin, GPIO_PIN_RESET);//GPIO_ResetBits(GPIOA, MAX7219_CLK);
-		HAL_Delay(1);
+		//HAL_Delay(1);
 		HAL_GPIO_WritePin(CLK2_GPIO_Port, CLK2_Pin, GPIO_PIN_SET);//GPIO_SetBits(GPIOA, MAX7219_CLK);
 		dat<<=1;
 	}
@@ -100,13 +100,14 @@ void MAX7219_SendAddrDat2 (unsigned char addr,unsigned char dat)
 
 void MAX7219_Init2 (void)
 {
-		MAX7219_SendAddrDat2 (0x0c,0x01); //normal operation
-		MAX7219_SendAddrDat2 (0x0a,0x02); //intensity
-		MAX7219_SendAddrDat2 (0x0b,0x07); //all digits on
-		MAX7219_SendAddrDat2 (0x09,0x00); //decoding
-		MAX7219_SendAddrDat2 (0x0f,0x00); //display test off
+		MAX7219_SendAddrDat2 (shut_down,0x01); //normal operation
+		MAX7219_SendAddrDat2 (intensity,0x02); //intensity
+		MAX7219_SendAddrDat2 (scanLimit,0x07); //all digits on
+		MAX7219_SendAddrDat2 (decodeMode,0x00); //decoding
+		MAX7219_SendAddrDat2 (disTest,0x00); //display test off
 }
 #endif
+
 
 void display_init_check(void)
 {
@@ -213,4 +214,18 @@ void day_display(void)
 	
 }
 #endif
+
+void chinhdosang(void)
+{
+	uint32_t i;
+	LEDintensity++;
+	if(LEDintensity > 15) LEDintensity =1;
+	if(LEDintensity < 0) LEDintensity =1;
+	MAX7219_SendAddrDat (intensity,LEDintensity); //intensity
+	#ifdef SLAVE_WALL
+	MAX7219_SendAddrDat2 (intensity,LEDintensity); //intensity
+	#endif
+	for (i=0;i<1000;i++);
+}
+
 

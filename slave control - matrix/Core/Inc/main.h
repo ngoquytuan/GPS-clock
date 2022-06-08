@@ -105,7 +105,7 @@ void scan_7up(void);
 void scan_5down(void);
 void load_line2(uint8_t dis_hour,uint8_t dis_min,uint8_t dis_sec,uint8_t dot);
 void line2_matrix_init (void);
-
+void chinhdosang(void);
 
 
 void RTC_factory_RST(void);

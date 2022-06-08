@@ -126,6 +126,7 @@ void SNTP_init(void)
 	  ntpmessage[13]  = 0x4E;
 	  ntpmessage[14]  = 49;
 	  ntpmessage[15]  = 52;
+		RetrySend = 50;
 }
 
 
@@ -188,8 +189,10 @@ int8_t SNTP_run(void)//datetime sntp;
 				{
 					RetrySend = 0;
 					sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
+					
 					//sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
-#ifdef			ntpClientDebug					
+#ifdef			ntpClientDebug		
+					printf("NTP ask for time sent");					
 					printf("Gui ban tin di :");//35 0 6 236 0 0 0 0 0 0 0 0 49 78 49 52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 					for(i=0;i<48;i++)
 					{

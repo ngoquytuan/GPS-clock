@@ -47,7 +47,8 @@ int8_t stableSignal = SIGNAL_FROM_MASTER_BAD;
 int8_t count_Stable_signal = 0;
 int8_t timeOutLostSignal = 0;
 //Thoi gian luu gio tu RS485 vao RTC
-int16_t timeSaveRS485_to_RTC = 3600;
+int16_t timeSaveRS485_to_RTC = 60;
+extern uint8_t LEDintensity;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -177,9 +178,12 @@ int main(void)
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 	HAL_Delay(100);
 	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("This code gen by STMcube STM32G474@128MHz\r\n");
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	//printf("This code gen by STMcube STM32G474@128MHz\r\n");
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	
+	LEDintensity = 1;
 	loadValue();
 	storeValue();
   /* USER CODE END 2 */
@@ -188,14 +192,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	
 	display_init_check();
+	slave_clock.sync_status = LOCAL;
+	//MAX7219_SendAddrDat (0x0a,LEDintensity); //intensity
   //HAL_GPIO_ReadPin(SQW_GPIO_Port,SQW_Pin); GPIO_PIN_SET
 	
 	
-	laythoigian();
+	//laythoigian();
 	
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("Time :%dh%dm%ds;%d %d/%d/%d , %d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6],nhietdo);
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	//printf("Time :%dh%dm%ds;%d %d/%d/%d , %d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6],nhietdo);
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	
 	
   //RTC_factory_RST();
@@ -664,6 +670,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 //		printf("Factory reset\r\n");
 //		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+		chinhdosang();
   }
 	if (GPIO_Pin == SQW_Pin)
   {
@@ -750,16 +757,23 @@ void main_message_handle(void)
 		haveSignalFromRS485 = HAVE_SIGNAL;
 		timeOutLostSignal = 10;
 		
-	  if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
+		//		if(aRxBuffer[16]=='A') gps1_stt = 1;
+//		else gps1_stt = 0;
+//		if(aRxBuffer[17]=='A') gps2_stt = 1;
+//		else gps2_stt = 0;
+
+		if((aRxBuffer[16]=='A') || (aRxBuffer[17]=='A') )
+			{ if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
+			}
 		if(count_Stable_signal >= STABE_NUMBER) 
 			{
-				stableSignal = SIGNAL_FROM_MASTER_OK;
-				slave_clock.sync_status = GPS;
+						stableSignal = SIGNAL_FROM_MASTER_OK;
+						slave_clock.sync_status = GPS;
 			}
 			
 		if(timeSaveRS485_to_RTC == 1)
 		{
-			timeSaveRS485_to_RTC = 3600;
+			timeSaveRS485_to_RTC = 60;
 			//sync rs485 time to RTC 
 			ghids(14,0);//1HZ out SQW
 			ghids(DS_SECOND_REG,seconds);
