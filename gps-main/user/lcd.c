@@ -9,7 +9,7 @@ void delay_us(volatile uint32_t num)
 	volatile uint32_t index = 0;
 	//__IO uint32_t temp = 0;
 	/* Default system clock is 128MHz */
-	for(index = ( 16* num); index != 0; index--);
+	for(index = ( 20* num); index != 0; index--);
 }
 /*******************************************************************************
 Noi Dung    :   Config IO for LCD.
@@ -137,12 +137,26 @@ Noi Dung    :   Viet 1 chuoi ki tu len LCD.
 Tham Bien   :   Khong.
 Tra Ve      :   Khong.
 ********************************************************************************/
-void LCD_Puts (char *s)
+void LCD_Puts (uint8_t *s)
 {
    while (*s)
    {
       LCD_Putc(*s);
       s++;
+   }
+}
+void LCD_Puts2 (uint8_t *s , int8_t length)
+{
+	while (length)
+   {
+     if( *s == 0) LCD_Putc(' '); 
+		 else 
+		{
+			LCD_Putc(*s);
+      s++;
+		}
+		 
+		  length--;
    }
 }
 int lcdprintf(const char *fmt,...)

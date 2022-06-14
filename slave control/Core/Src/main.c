@@ -270,6 +270,7 @@ int main(void)
 				{
 					stableSignal = SIGNAL_FROM_MASTER_BAD;
 					haveSignalFromRS485 = NO_SIGNAL;
+					laythoigian();
 					slave_clock.sync_status = LOCAL;
 				}
 			
@@ -757,20 +758,24 @@ void main_message_handle(void)
 		haveSignalFromRS485 = HAVE_SIGNAL;
 		timeOutLostSignal = 10;
 		
-		//		if(aRxBuffer[16]=='A') gps1_stt = 1;
-//		else gps1_stt = 0;
-//		if(aRxBuffer[17]=='A') gps2_stt = 1;
-//		else gps2_stt = 0;
-
-		if((aRxBuffer[16]=='A') || (aRxBuffer[17]=='A') )
-			{ if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
-			}
+		
+    if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
+		
 		if(count_Stable_signal >= STABE_NUMBER) 
 			{
 						stableSignal = SIGNAL_FROM_MASTER_OK;
-						slave_clock.sync_status = GPS;
-			}
+						
+						
 			
+			}
+
+		if((aRxBuffer[16]=='A') || (aRxBuffer[17]=='A') )
+						{ 
+							slave_clock.sync_status = GPS;
+						}
+		if((aRxBuffer[16]=='V') && (aRxBuffer[17]=='V') )				
+		  slave_clock.sync_status = BOTH;
+						
 		if(timeSaveRS485_to_RTC == 1)
 		{
 			timeSaveRS485_to_RTC = 60;

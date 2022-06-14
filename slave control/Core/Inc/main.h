@@ -76,7 +76,8 @@ void Error_Handler(void);
 #define LOCAL 1
 //Lay thoi gian tu dong ho master ( co dong bo)
 #define GPS   0
-
+// No GPS and  synced
+#define BOTH   2
 #define STABE_NUMBER 				10
 #define HAVE_SIGNAL 				1
 #define NO_SIGNAL 				  0

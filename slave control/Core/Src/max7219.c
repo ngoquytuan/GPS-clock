@@ -157,6 +157,7 @@ void console_display(void)
 }
 void console_blink(void)
 {
+	//MAX7219_SendAddrDat(0x07,0xFF);// all + local + gps
 	//MAX7219_SendAddrDat(0x07,0xFB);// all + local
 	//MAX7219_SendAddrDat(0x07,0x03);// off all + local
 	//MAX7219_SendAddrDat(0x07,0xFD);// all + gps
@@ -168,24 +169,28 @@ void console_blink(void)
 	{
 		blynk = 1;
 		#ifdef SLAVE_CONSOLE
-		if(slave_clock.sync_status == LOCAL) MAX7219_SendAddrDat(0x07,0xFB);//all + local
-		else MAX7219_SendAddrDat(0x07,0xFD);// all + gps
+		if     (slave_clock.sync_status == LOCAL) MAX7219_SendAddrDat(0x07,0xFB);//all + local
+		else if(slave_clock.sync_status == GPS)   MAX7219_SendAddrDat(0x07,0xFD);// all + gps
+		else MAX7219_SendAddrDat(0x07,0xFF);// all + gps + local
 		#endif
 		#ifdef SLAVE_WALL
 		if(slave_clock.sync_status == LOCAL) MAX7219_SendAddrDat(0x07,0xF6);//all + local
-		else MAX7219_SendAddrDat(0x07,0xF8);//all + gps
+		else if(slave_clock.sync_status == GPS)   MAX7219_SendAddrDat(0x07,0xF8);//all + gps
+		else MAX7219_SendAddrDat(0x07,0xFE);// all + gps + local
 		#endif
 	}
 	else
 	{
 		blynk =0;
 		#ifdef SLAVE_CONSOLE
-		if(slave_clock.sync_status == LOCAL) MAX7219_SendAddrDat(0x07,0x03);// off all + local
-		else MAX7219_SendAddrDat(0x07,0x05);// off all + gps
+		if     (slave_clock.sync_status == LOCAL) MAX7219_SendAddrDat(0x07,0x03);// off all + local
+		else if(slave_clock.sync_status == GPS)   MAX7219_SendAddrDat(0x07,0x05);// off all + gps
+		else MAX7219_SendAddrDat(0x07,0x07);// off all + gps + local
 		#endif
 		#ifdef SLAVE_WALL
 		if(slave_clock.sync_status == LOCAL) MAX7219_SendAddrDat(0x07,0x06);//off all + local
-		else MAX7219_SendAddrDat(0x07,0x08);//off all + gps
+		else if(slave_clock.sync_status == GPS)   MAX7219_SendAddrDat(0x07,0x08);//off all + gps
+		else MAX7219_SendAddrDat(0x07,0x0E);// off all + gps + local
 		#endif
 	}
 }

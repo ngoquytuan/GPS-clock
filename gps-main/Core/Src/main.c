@@ -32,6 +32,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+uint32_t t,t1,t2,t3,t4;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -67,16 +68,16 @@ uint8_t u1Timeout=0;
 uint8_t u2Timeout=0;
 uint8_t u3Timeout=0;
 uint32_t tim20ct=0;
-/* Size of Reception buffer */
-#define RX1BUFFERSIZE                      1000
-#define RX2BUFFERSIZE                      1000
-#define RX3BUFFERSIZE                      100
+
+uint8_t TimeMessage[20];
 /* Buffer used for reception */
 uint8_t Rx1Buffer[RX1BUFFERSIZE];
 uint8_t Rx2Buffer[RX2BUFFERSIZE];
 uint8_t Rx3Buffer[RX3BUFFERSIZE];
 /* Variables for ADC conversion data computation to physical values */
 __IO uint16_t uhADCxConvertedData_Voltage_mVolt = 0U;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
+uint8_t updateLCD = 1;
+extern char ds3231_reg[7];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,36 +96,7 @@ static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
 static void storeValue(void);
 static void loadValue(void);
-//----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
-unsigned char i2c_write[1];
-char time[7],giaycu,ngay_al,thang_al,nhietdo,nhietdole;
-unsigned char i2c_rv[19];
-void BCD_Decoder()
-{
-	//printf("i2c_rv[3]: %d",i2c_rv[3]);
-	for(char x=0;x<7;x++) time[x]=(i2c_rv[x] & 0x0f) + (i2c_rv[x]>>4)*10;
-	//time[3] --; 
-}
-unsigned char BCD_Encoder(unsigned char temp)
-{
-	return ((temp/10)<<4)|(temp%10);
-}
-void laythoigian()
-{
-	HAL_I2C_Mem_Read(&hi2c2,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,i2c_rv,19,1000); //read time
-	BCD_Decoder(); //chuyen doi
-	nhietdo = i2c_rv[17];
-	nhietdole = i2c_rv[18]>>6;
-	if(nhietdole == 1) nhietdole = 25;
-	else if(nhietdole == 2) nhietdole = 5;
-	else if(nhietdole == 3) nhietdole = 75;
-	else nhietdole = 0;
-}
-void ghids(unsigned char add, unsigned char dat)
-{
-	i2c_write[0] = BCD_Encoder(dat);
-	HAL_I2C_Mem_Write(&hi2c2,0x68<<1,add,I2C_MEMADD_SIZE_8BIT,i2c_write,1,1000); 
-}
+
 
 void scan_ADC(void);
 
@@ -199,6 +171,7 @@ void ADC_Select_CH17 (void)
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+GPSClock_t GPS_clock;
 void check(uint8_t *gps)
 {
 	printf("%c",gps[0]);
@@ -206,6 +179,7 @@ void check(uint8_t *gps)
 	else gps++;
 	printf("%c",gps[0]);
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -261,24 +235,17 @@ uint8_t test=0;
 	HAL_Delay(1000);
 	LCD_Clear();
 	LCD_Gotoxy(0,0);
+	
 	laythoigian();
-	if(time[3] == 6) LCD_Puts("Fri ");
-	else	if(time[3] == 5) LCD_Puts("Thu ");
-	else	if(time[3] == 4) LCD_Puts("Wed ");
-	else	if(time[3] == 3) LCD_Puts("Tue ");
-	else	if(time[3] == 2) LCD_Puts("Mon ");
-	else	if(time[3] == 7) LCD_Puts("Sat ");
-	else	if(time[3] == 1) LCD_Puts("Sun ");
-	else LCD_Puts("??? ");
-			
-	lcdprintf("%2d/%2d/20%2d %2d:%2d:%2d",time[4],time[5],time[6],time[2],time[1],time[0]);
-	/*ghids(0,0);
-	ghids(1,05);
-	ghids(2,11);
-	ghids(3,6);
-	ghids(4,25);
-	ghids(5,3);
-	ghids(6,22);
+	/*
+	ghids(14,0);//1HZ out SQW
+	//ghids(DS_SECOND_REG,0);
+	//ghids(DS_MIN_REG,05);
+	//ghids(DS_HOUR_REG,11);
+	//ghids(DS_DAY_REG,6);
+	ghids(DS_DATE_REG,14);
+	ghids(DS_MONTH_REG,6);
+	ghids(DS_YEAR_REG,22);
 	*/
 	/*
 	if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
@@ -286,7 +253,7 @@ uint8_t test=0;
     // Transfer error in reception process 
     Error_Handler();
   }*/
-	GPS_Init();
+	//GPS_Init();
 	HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_SET);
@@ -338,6 +305,17 @@ uint8_t test=0;
 //    /* Transfer error in reception process */
 //    Error_Handler();
 //  }
+
+  LCD_Clear();
+	LCD_Gotoxy(0,0);
+	LCD_Puts("GPS1:");
+	LCD_Gotoxy(0,20);
+	LCD_Puts("RTC: ");
+	LCD_Gotoxy(1,0);
+	LCD_Puts("GPS2:");
+	//LCD_Gotoxy(1,20);
+	//LCD_Puts("IP: ");
+	//Tim phuong an xu ly treo uart!!!
 	HAL_UART_Abort(&huart3);
 	if (HAL_UART_Receive_IT(&huart3, (uint8_t *)Rx3Buffer, RX3BUFFERSIZE) != HAL_OK)
 		{
@@ -345,6 +323,7 @@ uint8_t test=0;
 			Error_Handler();
 		}
 	HAL_TIM_Base_Start_IT(&htim20);
+	HAL_TIM_Base_Start_IT(&htim8);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -360,74 +339,81 @@ uint8_t test=0;
     /* Calibration Error */
     Error_Handler();
   }
-	HAL_UART_Abort(GPS1_USART);
+	GPS_clock.gps1_valid = 'x';
+	GPS_clock.gps2_valid = 'x';
+	//GPS_clock.gps1_time[6] = 0;
+	//GPS_clock.gps2_time[6] = 0;
+	HAL_UART_Abort(&huart1);
 	HAL_UART_Receive_IT(&huart1, Rx1Buffer, RX1BUFFERSIZE);
-  while (1)
+	HAL_UART_Abort(&huart2);
+	HAL_UART_Receive_IT(&huart2, Rx2Buffer, RX2BUFFERSIZE);
+  fractionOfSecond = 0;
+	GPS_clock.gps1_lock = 0;
+	GPS_clock.gps2_lock = 0;
+	GPS_clock.update_rtc = 1;
+	TimeMessage[0] = '$';
+	TimeMessage[1] = 'G';
+	TimeMessage[2] = 'P';
+	TimeMessage[3] = 'S';
+	TimeMessage[4] = '0';
+	TimeMessage[5] = '0';
+	TimeMessage[6] = '0';
+	TimeMessage[7] = '0';
+	TimeMessage[8] = '0';
+	TimeMessage[9] = '0';
+	TimeMessage[10] = '0';
+	TimeMessage[11] = '0';
+	TimeMessage[12] = '0';
+	TimeMessage[13] = '0';
+	TimeMessage[14] = '0';
+	TimeMessage[15] = '0';
+	TimeMessage[16] = '0';
+	TimeMessage[17] = '0';
+	TimeMessage[18] = '0';
+	TimeMessage[19] = '0';
+	while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
-		
+		//t = fractionOfSecond;
+		check_uart();
+		//t1 = fractionOfSecond;
+		if(updateLCD == 1) 
+		{
+			updateLCD = 0;
+			//Neu co GPS : update theo gps de ko bi tre hien thi so voi gps
+			//Neu ko co GPS update the RTC
+			sweep_LCD();
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+		}
+		//t2 = fractionOfSecond;
 		if(tim20ct > 1000) {
 			tim20ct = 0;
 			scan_ADC();	
+			//if(updateLCD == 1) updateLCD = 0;
+			//else updateLCD =1;
 			//printf("1S\r\n");
-			
+			//laythoigian();
+			//printf("%d , %d, %d\r\n",t,t1,t2);
 		}
-		if(u1Timeout == 1) 
-		{
-			u1Timeout = 0;
-			//printf("U1 %s; \r\n",Rx1Buffer);
-			check(Rx1Buffer);
-			huart1.pRxBuffPtr = (uint8_t *)Rx1Buffer;
-			huart1.RxXferCount = RX1BUFFERSIZE;
-			memset(Rx1Buffer,0,RX1BUFFERSIZE);
-		}
+		
 		if(tim20ct < 100) {
 			
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_RESET);
+			
+			//HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_RESET);
+			//HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_RESET);
 		}
 		else
 			{
-				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_SET);
+				//HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+				//HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_SET);
+				//HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_SET);
 			}
 		
 		//HAL_Delay(50);
-		
-		//laythoigian();
-		//printf("Time :%d %d %d %d %d %d %d, %d,%d\r\n",time[0],time[1],time[2],time[3],time[4],time[5],time[6],nhietdo,nhietdole);
-		//HAL_Delay(50);
-		//printf("utc_time %f\r\n",GPS.utc_time);
-//		if(u1Timeout == 1) 
-//			{
-//				u1Timeout = 0;
-//				//printf("U1 %s; \r\n",Rx1Buffer);
-//				huart1.pRxBuffPtr = (uint8_t *)Rx1Buffer;
-//				huart1.RxXferCount = RX1BUFFERSIZE;
-//				memset(Rx1Buffer,0,RX1BUFFERSIZE);
-//			}
-			
-//		if(u2Timeout == 1) 
-//			{
-//				u2Timeout = 0;
-//				//printf("U2 %s; \r\n",Rx2Buffer);
-//				huart2.pRxBuffPtr = (uint8_t *)Rx2Buffer;
-//				huart2.RxXferCount = RX2BUFFERSIZE;
-//				memset(Rx2Buffer,0,RX2BUFFERSIZE);
-//			}
-		if(u3Timeout == 1) 
-			{
-				u3Timeout = 0;
-				printf("U3 %s; \r\n",Rx3Buffer);
-				huart3.pRxBuffPtr = (uint8_t *)Rx3Buffer;
-				huart3.RxXferCount = RX3BUFFERSIZE;
-				memset(Rx3Buffer,0,RX3BUFFERSIZE);
-			}
-		
-		//printf("ADC %d; \r\n",uhADCxConvertedData_Voltage_mVolt);
 
   }
   /* USER CODE END 3 */
@@ -699,9 +685,9 @@ static void MX_TIM8_Init(void)
 
   /* USER CODE END TIM8_Init 1 */
   htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 149;
+  htim8.Init.Prescaler = 1280-1;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 499;
+  htim8.Init.Period = 9999;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
   htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -886,7 +872,7 @@ static void MX_USART3_UART_Init(void)
 
   /* USER CODE END USART3_Init 1 */
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
+  huart3.Init.BaudRate = 9600;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
@@ -1010,13 +996,40 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	//Neu GPS1 ko co PPS thi moi lay PPS cua GPS2
 	if (GPIO_Pin == GPS1PPS_Pin)
   {
+		//t = fractionOfSecond;
+		//fractionOfSecond = 0;
+		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
-		printf("GPS1PPS\r\n");
+		//day la thoi diem bat dau cua giay ( start of second) 
+		// - cap nhat LCD
+		// - cap nhat thoi gian
+		// - gui ban tin toi mach giao tiep
+		//GPS_clock.gps1_lock = 0
+		if(GPS_clock.update_rtc > 1) GPS_clock.update_rtc --;
+		if(GPS_clock.gps1_lock == 1)
+		{
+			if(GPS_clock.update_rtc == 1)//luu thoi gian vao rtc
+			{
+				GPS_clock.update_rtc = 100;
+				
+				ghids(14,0);//1HZ out SQW
+				ghids(DS_SECOND_REG,seconds);
+				ghids(DS_MIN_REG,minutes);
+				ghids(DS_HOUR_REG,hours);
+				
+				ghids(DS_DATE_REG,days);
+				ghids(DS_MONTH_REG,months);
+				ghids(DS_YEAR_REG,years);
+			}
+		}
+		HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+		updateLCD =1;
+		//printf("GPS1PPS\r\n");
   }
 	else if (GPIO_Pin == GPS2PPS_Pin)
   {
 		HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
-		printf("GPS2PPS\r\n");
+		//printf("GPS2PPS\r\n");
   }
 }
 
@@ -1096,20 +1109,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
     if(UartHandle == &huart3) 
 			{
 				
-				printf("buffer full!\r\n");
+				//printf("buffer full!\r\n");
 				HAL_UART_Receive_IT(&huart3, (uint8_t *)Rx3Buffer, RX3BUFFERSIZE);
-				printf("U3 %s; \r\n",Rx3Buffer);
+				//printf("U3 %s; \r\n",Rx3Buffer);
 				huart3.pRxBuffPtr = (uint8_t *)Rx3Buffer;
 				huart3.RxXferCount = RX3BUFFERSIZE;
 				memset(Rx3Buffer,0,RX3BUFFERSIZE);
 			}
 			if(UartHandle == &huart1) 
 			{
-				GPS_UART_CallBack();
+				//GPS_UART_CallBack();
+				HAL_UART_Abort(GPS1_USART);
+				HAL_UART_Receive_IT(&huart1, Rx1Buffer, RX1BUFFERSIZE);
 			}
 			if(UartHandle == &huart1) 
 			{
-				GPS2_UART_CallBack();
+				//GPS2_UART_CallBack();
 			}
 				        
 }
@@ -1317,7 +1332,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-	printf("Error_Handler");
+	//printf("Error_Handler");
   __disable_irq();
   while (1)
   {

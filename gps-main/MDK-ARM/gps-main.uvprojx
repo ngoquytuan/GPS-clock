@@ -423,6 +423,11 @@
               <FileType>1</FileType>
               <FilePath>..\user\lcd.c</FilePath>
             </File>
+            <File>
+              <FileName>main_fucns.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\main_fucns.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

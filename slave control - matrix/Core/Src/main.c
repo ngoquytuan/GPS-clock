@@ -64,6 +64,8 @@ int16_t timeSaveRS485_to_RTC = 60;
 /* Private variables ---------------------------------------------------------*/
  I2C_HandleTypeDef hi2c3;
 
+IWDG_HandleTypeDef hiwdg;
+
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim3;
@@ -82,8 +84,7 @@ wiz_NetInfo myipWIZNETINFO = { .mac = {0x0A, 0x18, 0xDC,0x4F, 0xEB, 0x6F},
 
 uint8_t u2Timeout = 0;
 uint32_t timct=0;
-															 /* Size of Reception buffer */
-#define RXBUFFERSIZE                      100
+
 /* Buffer used for reception */
 uint8_t aRxBuffer[RXBUFFERSIZE];
 															 
@@ -105,6 +106,7 @@ static void MX_TIM3_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -120,7 +122,6 @@ void uart2_processing(void)
 	if(u2Timeout == 1) 
 			{
 				u2Timeout = 0;
-        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 				//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 				//HAL_UART_Transmit(&huart2, aRxBuffer, 20, 100);
 				main_message_handle();
@@ -129,6 +130,8 @@ void uart2_processing(void)
 				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
 				huart2.RxXferCount = RXBUFFERSIZE;
 				memset(aRxBuffer,0,RXBUFFERSIZE);
+				//LED off
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 			}
 }
 /* USER CODE END 0 */
@@ -167,18 +170,16 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C3_Init();
   MX_TIM4_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
 	
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-	
+	#ifdef DebugEnable
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 	printf("This code gen by STMcube STM32G474@128MHz\r\n");
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	
+	#endif
 	//loadValue();
 	//storeValue();
   /* USER CODE END 2 */
@@ -193,20 +194,19 @@ int main(void)
 	
 	
 	laythoigian();
-	
+	#ifdef DebugEnable
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 	printf("Time :%dh%dm%ds;%d %d/%d/%d , %d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6],nhietdo);
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	
+	#endif
 	load_line1(days,months,years);
 	scan_7up();
 	load_line2(hours,minutes,seconds,1);
 	scan_5down();
   //RTC_factory_RST();
-	
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 	w5500_lib_init();
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	#ifdef DebugEnable
+	#endif
 	SNTP_init();
 	
 	HAL_UART_Abort(&huart2);
@@ -226,9 +226,10 @@ int main(void)
 	*  IC RTC hong => NO RTC
   *  IC RTC het pin => NO BATTERY 	
 	*/
-	
+	//HAL_IWDG_Refresh(&hiwdg);
   while (1)
   {
+		HAL_IWDG_Refresh(&hiwdg);
     t1 = fractionOfSecond;
 		//HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 		//HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
@@ -297,6 +298,7 @@ int main(void)
 		//t3 = fractionOfSecond-t2;
 		uart2_processing();
 		//t4 = fractionOfSecond-t3;
+		HAL_IWDG_Refresh(&hiwdg);
 		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 		SNTP_run();
 		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
@@ -321,8 +323,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
@@ -395,6 +398,35 @@ static void MX_I2C3_Init(void)
   /* USER CODE BEGIN I2C3_Init 2 */
 
   /* USER CODE END I2C3_Init 2 */
+
+}
+
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
+  hiwdg.Init.Window = 4095;
+  hiwdg.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
 
 }
 
@@ -797,9 +829,14 @@ void main_message_handle(void)
 		if(count_Stable_signal >= STABE_NUMBER) 
 			{
 				stableSignal = SIGNAL_FROM_MASTER_OK;
-				slave_clock.sync_status = GPS;
 			}
-			
+		if((aRxBuffer[16]=='A') || (aRxBuffer[17]=='A') )
+						{ 
+							slave_clock.sync_status = GPS;
+						}
+		if((aRxBuffer[16]=='V') && (aRxBuffer[17]=='V') )				
+		  slave_clock.sync_status = BOTH;
+							
 		if(timeSaveRS485_to_RTC == 1)
 		{
 			//seconds++;
@@ -838,6 +875,7 @@ void main_message_handle(void)
 //		if(aRxBuffer[19]=='1') power2_stt = 1;
 //		else power2_stt = 0;
 	}
+	else control();
 }
 #ifdef __GNUC__
   /* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf

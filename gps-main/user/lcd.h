@@ -104,7 +104,8 @@ Noi Dung    :   Viet 1 chuoi ki tu len LCD.
 Tham Bien   :   Khong.
 Tra Ve      :   Khong.
 ********************************************************************************/
-void LCD_Puts (char *s);
+void LCD_Puts2 (uint8_t *s , int8_t length);
+void LCD_Puts (uint8_t *s);
  /*******************************************************************************
 Noi Dung    :   printf len LCD.
 Tham Bien   :   giong nhu printf.

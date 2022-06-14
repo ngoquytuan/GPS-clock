@@ -1,11 +1,12 @@
 #include <time.h>
 #include "socketdefines.h"
+#include "main.h"
 #include <stdint.h>
 #include <stdio.h>
 #include "socket.h"
 
 
-//#define ntpClientDebug
+#define ntpClientDebug
 #define	MAX_SNTP_BUF_SIZE	sizeof(ntpformat)		///< maximum size of DNS buffer. */
 	
 /* for ntpclient */
@@ -55,9 +56,7 @@ int8_t SNTP_run(void);
 
 extern time_t timenow;
 extern struct tm* timeinfo;
-extern uint8_t hours;
-extern uint8_t minutes;
-extern uint8_t seconds;
+
 
 uint8_t TimeIsSet = 0;
 uint16_t RetrySend = 0; //60 giay
@@ -140,10 +139,11 @@ int8_t SNTP_run(void)//datetime sntp;
 	//uint16_t startindex = 40; //last 8-byte of data_buf[size is 48 byte] is xmt, so the startindex should be 40
 	int8_t i;
 	uint32_t sec;
-	if (sycnPeriod >= 200) // dong bo lai thoi gian
+	if (sycnPeriod >= 120) // dong bo lai thoi gian
 	{
 		TimeIsSet = 0;
 		sycnPeriod = 0;
+		RetrySend = 0;
 	}
 	if(TimeIsSet == 1) return 1;
 	
@@ -175,9 +175,19 @@ int8_t SNTP_run(void)//datetime sntp;
 		  printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
 		  printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
 			#endif
+			days = timeinfo->tm_mday;
+			months = 1+timeinfo->tm_mon;
+			years = timeinfo->tm_year-100;
 			hours = timeinfo->tm_hour;
 			minutes = timeinfo->tm_min;
 			seconds = timeinfo->tm_sec;
+			
+			RTC_Update();
+			load_line1(days,months,years);
+			scan_7up();
+			load_line2(hours,minutes,seconds,1);
+			scan_5down();
+			
 			TimeIsSet = 1;
 			close(SOCK_SNTP);
 
@@ -193,13 +203,13 @@ int8_t SNTP_run(void)//datetime sntp;
 					//sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
 #ifdef			ntpClientDebug		
 					printf("NTP ask for time sent");					
-					printf("Gui ban tin di :");//35 0 6 236 0 0 0 0 0 0 0 0 49 78 49 52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-					for(i=0;i<48;i++)
-					{
-						printf("%d ",*(ntpmessage+i));
-					
-					}
-					printf("\r\n");
+//					printf("Gui ban tin di :");//35 0 6 236 0 0 0 0 0 0 0 0 49 78 49 52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+//					for(i=0;i<48;i++)
+//					{
+//						printf("%d ",*(ntpmessage+i));
+//					
+//					}
+//					printf("\r\n");
 #endif					
 				}
 				return 0;

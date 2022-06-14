@@ -31,6 +31,10 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#define DebugEnable
+
+/* Size of Reception buffer */
+#define RXBUFFERSIZE                      100
 
 #define decodeMode  0x09
 #define intensity   0x0A
@@ -67,6 +71,8 @@ void Error_Handler(void);
 #define LOCAL 1
 //Lay thoi gian tu dong ho master ( co dong bo)
 #define GPS   0
+// No GPS and  synced
+#define BOTH   2
 
 #define STABE_NUMBER 				30
 #define HAVE_SIGNAL 				1
@@ -92,13 +98,13 @@ extern uint8_t years;
 extern uint8_t hours;
 extern uint8_t minutes;
 extern uint8_t seconds;
-
+extern uint8_t aRxBuffer[RXBUFFERSIZE];
 
 void loadValue(void);
 void storeValue(void);
 void w5500_lib_init(void);
 void checklink(void);
-
+void control(void);
 void up7_matrix_init (void);
 void load_line1(uint8_t dis_date,uint8_t dis_month,uint8_t dis_year);
 void scan_7up(void);
@@ -109,7 +115,7 @@ void chinhdosang(void);
 
 
 void RTC_factory_RST(void);
-
+void RTC_Update(void);
 //define for DS3231
 #define DS_SECOND_REG 0
 #define DS_MIN_REG 1

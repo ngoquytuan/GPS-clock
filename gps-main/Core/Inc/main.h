@@ -86,10 +86,26 @@ void Error_Handler(void);
 #define LED_GPS1_GPIO_Port GPIOC
 #define LED_CPU_Pin GPIO_PIN_12
 #define LED_CPU_GPIO_Port GPIOC
+/* USER CODE BEGIN Private defines */
+#define fractionOfSecond TIM8->CNT
+//define for DS3231
+#define DS_SECOND_REG 0
+#define DS_MIN_REG 1
+#define DS_HOUR_REG 2
+#define DS_DAY_REG 3
+#define DS_DATE_REG 4
+#define DS_MONTH_REG 5
+#define DS_YEAR_REG 6
+//Realtime address -----------------------
+#define RTC_HOUR_ADDR 2
+#define RTC_MINUTE_ADDR	1
+#define RTC_SECOND_ADDR	0
+#define RTC_DAY_ADDR	4
+#define RTC_MONTH_ADDR	5
+#define RTC_YEAR_ADDR	6
 
 
 // hieu chuan gia tri dien ap
-//Tim cach nap lai he so K ma ko can nap lai chip!!
 #define k12v 		0.0384
 #define k5v 		0.0384
 #define kDCin1 	0.0384
@@ -106,12 +122,26 @@ typedef struct{
 	uint8_t gps2_stt;//trang thai chip GPS2
 	uint8_t gps_pps; 
 } main_sst;
+typedef struct{
 
+   
+  uint8_t gps1_time[6];
+  uint8_t gps2_time[6];
+  uint8_t gps1_valid;
+  uint8_t gps2_valid;
+	uint8_t gps1_date[6];
+	uint8_t gps2_date[6];
+  uint8_t con_ip[16];  
+	uint8_t rtc_time[6];
+	uint8_t rtc_date[6];
+	uint8_t gps1_lock;
+	uint8_t gps2_lock;
+  uint8_t update_rtc;  
+} GPSClock_t;
 // Thoi gian luu GPS vao RTC (minutes)
 #define RTC_store_time 60
 //Tre xu ly du lieu thoi gian (ns)
 #define DelayOfProcess 60
-/* USER CODE BEGIN Private defines */
 /* User can use this section to tailor ADCx instance under use and associated
    resources */
 
@@ -126,6 +156,17 @@ typedef struct{
   
   /* Gain compensation x1 factor */
   #define GAIN_COMPENSATION_X1_FACTOR      (0x1000UL)
+
+extern uint8_t days,months,years,hours,minutes,seconds ;
+extern uint8_t TimeMessage[20];
+/* Size of Reception buffer */
+#define RX1BUFFERSIZE                      1000
+#define RX2BUFFERSIZE                      1000
+#define RX3BUFFERSIZE                      100
+void check_uart(void);
+void sweep_LCD(void);
+void ghids(unsigned char add, unsigned char dat);
+void laythoigian(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

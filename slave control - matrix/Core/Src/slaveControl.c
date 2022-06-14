@@ -5,7 +5,7 @@
 
 static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
-
+static uint8_t unlock_config =0;
 #define MSEC_PHYSTATUS_CHECK 		1000		// msec
 #define PHYStatus_check_enable 1
 
@@ -114,7 +114,17 @@ void RTC_factory_RST(void)
 		ghids(DS_MONTH_REG,5);
 		ghids(DS_YEAR_REG,22);
 	}
-	
+void RTC_Update(void)
+	{
+		ghids(14,0);//1HZ out SQW
+		ghids(DS_SECOND_REG,seconds);
+		ghids(DS_MIN_REG,minutes);
+		ghids(DS_HOUR_REG,hours);
+		//ghids(DS_DAY_REG,2);
+		ghids(DS_DATE_REG,days);
+		ghids(DS_MONTH_REG,months);
+		ghids(DS_YEAR_REG,years);
+	}	
 void factoryRST(void)
 	{
 		
@@ -386,8 +396,9 @@ void Net_Conf(wiz_NetInfo temp_netinfo)
 	};
 	*/
 	ctlnetwork(CN_SET_NETINFO, (void*) &temp_netinfo);
-
+	#ifdef DebugEnable
 	Display_Net_Conf();
+	#endif
 }
 void w5500_lib_init(void){
 		
@@ -446,6 +457,25 @@ void w5500_lib_init(void){
 		//printf("...all ok\r\n");
 		Net_Conf(myipWIZNETINFO);
 	
+}
+void control(void)
+{
+	if(unlock_config == 1)
+	{//set all config here!!
+	}
+	if((aRxBuffer[0] =='A')&&(aRxBuffer[1] =='T'))
+	{
+		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+		//printf("AT on\r\n");
+		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+		unlock_config = 1;
+	}
+	else 
+	{
+		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+		printf("Linh tinh\r\n");
+		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	}
 }
 
 
