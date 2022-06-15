@@ -68,12 +68,13 @@ uint8_t u1Timeout=0;
 uint8_t u2Timeout=0;
 uint8_t u3Timeout=0;
 uint32_t tim20ct=0;
-
+uint8_t pps_down;
 uint8_t TimeMessage[20];
 /* Buffer used for reception */
 uint8_t Rx1Buffer[RX1BUFFERSIZE];
 uint8_t Rx2Buffer[RX2BUFFERSIZE];
 uint8_t Rx3Buffer[RX3BUFFERSIZE];
+uint32_t u1_halt,u2_halt,u3_halt;
 /* Variables for ADC conversion data computation to physical values */
 __IO uint16_t uhADCxConvertedData_Voltage_mVolt = 0U;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 uint8_t updateLCD = 1;
@@ -226,12 +227,12 @@ uint8_t test=0;
 	LCD_Init();
 	LCD_Clear();
 	LCD_Gotoxy(0,0);
-	LCD_Puts("STM32G473RBT@128MHz");
-	LCD_Gotoxy(1,0);
-	LCD_Puts("GPS: ok.");
-	lcdprintf("IP: %s","192.168.22.153");
-	storeValue();
-	loadValue();
+	LCD_Puts("GPS clock master");
+	//LCD_Gotoxy(1,0);
+	//LCD_Puts("GPS: ok.");
+	//lcdprintf("IP: %s","192.168.22.153");
+	//storeValue();
+	//loadValue();
 	HAL_Delay(1000);
 	LCD_Clear();
 	LCD_Gotoxy(0,0);
@@ -323,7 +324,7 @@ uint8_t test=0;
 			Error_Handler();
 		}
 	HAL_TIM_Base_Start_IT(&htim20);
-	HAL_TIM_Base_Start_IT(&htim8);
+	//HAL_TIM_Base_Start_IT(&htim8);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -350,7 +351,7 @@ uint8_t test=0;
   fractionOfSecond = 0;
 	GPS_clock.gps1_lock = 0;
 	GPS_clock.gps2_lock = 0;
-	GPS_clock.update_rtc = 1;
+	GPS_clock.update_rtc = 100;
 	TimeMessage[0] = '$';
 	TimeMessage[1] = 'G';
 	TimeMessage[2] = 'P';
@@ -371,6 +372,11 @@ uint8_t test=0;
 	TimeMessage[17] = '0';
 	TimeMessage[18] = '0';
 	TimeMessage[19] = '0';
+	//Neu tin hieu ve tinh kem, thoi gian tu bo thu GPS se ko on dinh!!!
+	u1_halt = 0;
+	u2_halt = 0;
+	u3_halt = 0;
+	pps_down = 0;
 	while (1)
   {
     /* USER CODE END WHILE */
@@ -388,14 +394,25 @@ uint8_t test=0;
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 		}
 		//t2 = fractionOfSecond;
-		if(tim20ct > 1000) {
+		if(tim20ct > 990) {
 			tim20ct = 0;
 			scan_ADC();	
-			//if(updateLCD == 1) updateLCD = 0;
-			//else updateLCD =1;
+			
 			//printf("1S\r\n");
 			//laythoigian();
-			//printf("%d , %d, %d\r\n",t,t1,t2);
+			
+			//Dem thoi gian ko hoat dong cua U1,U2,U3
+			u1_halt++;
+			u2_halt++;
+			u3_halt++;
+			if(pps_down < 3) pps_down++;
+			if(pps_down > 2) 
+			{
+				updateLCD =1;
+				//Ko co pps thi coi nhu GPS1 chua lock
+				GPS_clock.gps1_lock = 0;
+			}
+			
 		}
 		
 		if(tim20ct < 100) {
@@ -412,8 +429,6 @@ uint8_t test=0;
 				//HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_SET);
 				HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_SET);
 			}
-		
-		//HAL_Delay(50);
 
   }
   /* USER CODE END 3 */
@@ -1021,9 +1036,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 				ghids(DS_MONTH_REG,months);
 				ghids(DS_YEAR_REG,years);
 			}
+			//Gui thoi gian den mach giao tiep
+			HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
 		}
-		HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+		
 		updateLCD =1;
+		pps_down = 0;
 		//printf("GPS1PPS\r\n");
   }
 	else if (GPIO_Pin == GPS2PPS_Pin)

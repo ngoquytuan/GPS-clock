@@ -159,6 +159,8 @@ typedef struct{
 
 extern uint8_t days,months,years,hours,minutes,seconds ;
 extern uint8_t TimeMessage[20];
+extern uint32_t u1_halt,u2_halt,u3_halt;
+#define UART_MAYBE_HALT                    60
 /* Size of Reception buffer */
 #define RX1BUFFERSIZE                      1000
 #define RX2BUFFERSIZE                      1000

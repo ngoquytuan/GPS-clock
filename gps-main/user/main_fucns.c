@@ -33,8 +33,10 @@ unsigned char i2c_rv[19];
 void check_uart(void)
 {
 	uint8_t i,j;
+	
 	if(u1Timeout == 1) 
 			{
+				u1_halt   = 0;//U1 ok
 				u1Timeout = 0;
 				//t1= fractionOfSecond;
 				//printf("U1 %s; \r\n",Rx1Buffer);
@@ -103,6 +105,10 @@ void check_uart(void)
 				
 				
 				
+//				if(GPS_clock.gps1_lock != 1)
+//				{
+//					updateLCD =1;
+//				}
 				
 				huart1.pRxBuffPtr = (uint8_t *)Rx1Buffer;
 				huart1.RxXferCount = RX1BUFFERSIZE;
@@ -113,6 +119,7 @@ void check_uart(void)
 		if(u2Timeout == 1) 
 			{
 				u2Timeout = 0;
+				u2_halt   = 0;//U2 ok
 				//t2= fractionOfSecond;
 				//printf("U2 %s; \r\n",Rx2Buffer);
 				//HAL_UART_Transmit(&huart3, Rx2Buffer, 80, 100);
@@ -143,6 +150,24 @@ void check_uart(void)
 									GPS_clock.gps2_date[4] = Rx2Buffer[j+4];
 									GPS_clock.gps2_date[5] = Rx2Buffer[j+5];
 									if( GPS_clock.gps2_valid == 'A' ) GPS_clock.gps2_lock = 1;
+									//Neu GPS1 not lock, GPS2 locked => ban tin lay tu GPS2 gui di mach giao tiep
+									if((GPS_clock.gps1_lock != 1) && (GPS_clock.gps2_lock == 1))
+									{
+										TimeMessage[4] = GPS_clock.gps2_time[0];
+										TimeMessage[5] = GPS_clock.gps2_time[1];
+										TimeMessage[6] = GPS_clock.gps2_time[2];
+										TimeMessage[7] = GPS_clock.gps2_time[3];
+										TimeMessage[8] = GPS_clock.gps2_time[4];
+										TimeMessage[9] = GPS_clock.gps2_time[5];
+										TimeMessage[10] = GPS_clock.gps2_date[0];
+										TimeMessage[11] = GPS_clock.gps2_date[1];
+										TimeMessage[12] = GPS_clock.gps2_date[2];
+										TimeMessage[13] = GPS_clock.gps2_date[3];
+										TimeMessage[14] = GPS_clock.gps2_date[4];
+										TimeMessage[15] = GPS_clock.gps2_date[5];
+										//Gui thoi gian den mach giao tiep
+										HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+									}
 									//HAL_UART_Transmit(&huart3, GPS_clock.gps2_date, 6, 100);
 								  //HAL_UART_Transmit(&huart3, (uint8_t *)&" G2\r\n", 5, 100);
 								}
@@ -151,17 +176,23 @@ void check_uart(void)
 							//HAL_UART_Transmit(&huart3, (uint8_t *)&" G2\r\n", 5, 100);
 							//updateLCD = 1;
 					}
-					
+//					//neu GPS2 A thi cap nhat LCD theo GPS 2
+//					if((GPS_clock.gps2_valid == 'A') && (GPS_clock.gps1_lock != 1))
+//				{
+//					updateLCD =1;
+//				}
+				
 				huart2.pRxBuffPtr = (uint8_t *)Rx2Buffer;
 				huart2.RxXferCount = RX2BUFFERSIZE;
-				  memset(Rx2Buffer,0,RX2BUFFERSIZE);
-					HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_SET);
+				memset(Rx2Buffer,0,RX2BUFFERSIZE);
+				HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_SET);
 			}
 		if(u3Timeout == 1) 
 			{
 				u3Timeout = 0;
+				u3_halt   = 0;//u3 ok
 				//printf("U3 %s; \r\n",Rx3Buffer);
-				if((Rx3Buffer[0] == 'I') && (Rx3Buffer[1] == 'P')&& (Rx3Buffer[3] == ' '))
+				if((Rx3Buffer[0] == 'I') && (Rx3Buffer[1] == 'P')&& (Rx3Buffer[3] == ':'))
 					{
 						GPS_clock.con_ip[0] = Rx3Buffer[4];
 						GPS_clock.con_ip[1] = Rx3Buffer[5];
@@ -189,6 +220,51 @@ void check_uart(void)
 				huart3.pRxBuffPtr = (uint8_t *)Rx3Buffer;
 				huart3.RxXferCount = RX3BUFFERSIZE;
 				memset(Rx3Buffer,0,RX3BUFFERSIZE);
+			}
+			
+			if(u1_halt > UART_MAYBE_HALT) //Kha nang treo r
+			{
+				u1_halt = 0;
+				HAL_UART_Abort(&huart1);
+				HAL_UART_Receive_IT(&huart1, Rx1Buffer, RX1BUFFERSIZE);
+				//printf("Restart huart1\r\n");
+			}
+			if(u2_halt > UART_MAYBE_HALT) //Kha nang treo r
+			{
+				u2_halt = 0;
+				HAL_UART_Abort(&huart2);
+				HAL_UART_Receive_IT(&huart2, Rx2Buffer, RX2BUFFERSIZE);
+				//printf("Restart huart2\r\n");
+			}
+			if(u3_halt > UART_MAYBE_HALT) //Kha nang treo r
+			{
+				u3_halt = 0;
+				HAL_UART_Abort(&huart3);
+				HAL_UART_Receive_IT(&huart3, Rx3Buffer, RX3BUFFERSIZE);
+				//printf("Restart huart3\r\n");
+			}
+			//Neu UART ko nhan duoc du lieu nua thi xoa di
+			if((u1_halt > 10) && (GPS_clock.gps1_valid != 'X'))
+			{
+				GPS_clock.gps1_valid = 'X';
+				GPS_clock.gps1_lock = 0;
+				memset(GPS_clock.gps1_time,' ',6);
+				memset(GPS_clock.gps1_date,' ',6);
+			}
+			if((u2_halt > 10) && (GPS_clock.gps2_valid != 'X'))
+			{
+				GPS_clock.gps2_valid = 'X';
+				GPS_clock.gps2_lock = 0;
+				memset(GPS_clock.gps2_time,' ',6);
+				memset(GPS_clock.gps2_date,' ',6);
+			}
+			//Neu ko nhan dc IP thi xoa du lieu tren LCD
+			if((u3_halt > 30) && (GPS_clock.con_ip[0] != ' '))
+			{
+				memset(GPS_clock.con_ip,' ',16);
+				LCD_Gotoxy(1,20);
+				LCD_Puts("    ");
+				LCD_Puts2(GPS_clock.con_ip,16);
 			}
 }
 
@@ -250,6 +326,24 @@ void laythoigian(void)
   GPS_clock.rtc_date[2] = '0' + months /10;	
   GPS_clock.rtc_date[5] = '0' + years %10;
   GPS_clock.rtc_date[4] = '0' + years /10;
+	//Neu GPS1 not lock, GPS2 not lock => ban tin lay tu RTC gui di mach giao tiep
+	if((GPS_clock.gps1_lock != 1) && (GPS_clock.gps2_lock != 1))
+	{
+		TimeMessage[4] = GPS_clock.rtc_time[0];
+		TimeMessage[5] = GPS_clock.rtc_time[1];
+		TimeMessage[6] = GPS_clock.rtc_time[2];
+		TimeMessage[7] = GPS_clock.rtc_time[3];
+		TimeMessage[8] = GPS_clock.rtc_time[4];
+		TimeMessage[9] = GPS_clock.rtc_time[5];
+		TimeMessage[10] = GPS_clock.rtc_date[0];
+		TimeMessage[11] = GPS_clock.rtc_date[1];
+		TimeMessage[12] = GPS_clock.rtc_date[2];
+		TimeMessage[13] = GPS_clock.rtc_date[3];
+		TimeMessage[14] = GPS_clock.rtc_date[4];
+		TimeMessage[15] = GPS_clock.rtc_date[5];
+		//Gui thoi gian den mach giao tiep
+		HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+	}
 }
 void ghids(unsigned char add, unsigned char dat)
 {
