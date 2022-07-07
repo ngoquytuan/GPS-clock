@@ -522,7 +522,7 @@
 							"<tbody>"\
 								"<tr>"\
 									"<td>IP adress:&nbsp</td>"\
-									"<td colspan='2'><input id='txtip' name='ip' type='text' value='192.168.1.246'/></td>"\
+									"<td colspan='2'><input id='txtip' name='ip' type='text' value='192.168.1.39'/></td>"\
 								"</tr>"\
 								"<tr>"\
 									"<td>Subnet mask:&nbsp</td>"\
@@ -551,8 +551,8 @@
 "<body><CENTER>"\
 "<h3>IP config</h3>"\
 "<FORM METHOD='POST' action='config.cgi'><br>"\
-"<input type=\"text\" name=\"ip\" value=\"192.168.1.246\"> DeviveIP<br>"\
-"<input type=\"text\" name=\"gw\" value=\"192.168.1.1\"> Getway<br>"\
+"<input type=\"text\" name=\"ip\" value=\"192.168.1.39\"> DeviveIP<br>"\
+"<input type=\"text\" name=\"gw\" value=\"0.0.0.0\"> Getway<br>"\
 "<input type=\"text\" name=\"sn\" value=\"255.255.255.0\"> Subnet <br>"\
 "<input type=\"submit\" value=\"SAVE\">"\
 "</form>"\

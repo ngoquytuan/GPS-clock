@@ -1,18 +1,19 @@
+//last edit @ 7 July 2022 by tuannq
+#include "stm32g4xx_hal.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
+
 #include "socket.h"
 #include "wizchip_conf.h"
-#include "socketdefines.h"
 #include "httpServer.h"
 #include "httpParser.h"
 #include "httpUtil.h"
 #include "webpage.h"
-#ifdef	_USE_SDCARD_
-#include "ff.h" 	// header file for FatFs library (FAT file system)
-#endif
 
+#define MAX_HTTPSOCK		 3
 #ifndef DATA_BUF_SIZE
 	#define DATA_BUF_SIZE		2048
 #endif
@@ -20,8 +21,9 @@
 //////////////////////////////////////////////////////////////////////
 // Shared Buffer Definition WEB server////////////////////////////////
 //////////////////////////////////////////////////////////////////////
-uint8_t RX_BUF[DATA_BUF_SIZEHTTP];
-uint8_t TX_BUF[DATA_BUF_SIZEHTTP];
+uint8_t RX_BUF[DATA_BUF_SIZE];
+uint8_t TX_BUF[DATA_BUF_SIZE];
+//Dung nhung socket nao de chay http???
 uint8_t socknumlist[] = {5, 6, 7};
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -74,18 +76,20 @@ void default_wdt_reset(void) {;}
 void (*HTTPServer_ReStart)(void) = default_mcu_reset;
 void (*HTTPServer_WDT_Reset)(void) = default_wdt_reset;
 
-	
+	//Goi nhung trang web trong bo nho: 	#include "webpage.h"
 void loadwebpages(void)
 {
 		//Lien quan den webserver
-		//reg_httpServer_cbfunc(NVIC_SystemReset, NULL); 
-		reg_httpServer_cbfunc(NVIC_SystemReset, IWDG_ReloadCounter); // Callback: STM32 MCU Reset / WDT Reset (IWDG)
+		reg_httpServer_cbfunc(NVIC_SystemReset, NULL); 
+		//reg_httpServer_cbfunc(NVIC_SystemReset, IWDG_ReloadCounter); // Callback: STM32 MCU Reset / WDT Reset (IWDG)
+	  
 		/* HTTP Server Initialization  */
 		httpServer_init(TX_BUF, RX_BUF, MAX_HTTPSOCK, socknumlist);
+	
 		reg_httpServer_webContent((uint8_t *)"index.html", (uint8_t *)index_page);				// index.html 		: Main page example
 		reg_httpServer_webContent((uint8_t *)"netinfo.html", (uint8_t *)netinfo_page);			// netinfo.html 	: Network information example page
 		reg_httpServer_webContent((uint8_t *)"netinfo.js", (uint8_t *)wiz550web_netinfo_js);	// netinfo.js 		: JavaScript for Read Network configuration 	(+ ajax.js)
-		reg_httpServer_webContent((uint8_t *)"img.html", (uint8_t *)img_page);					// img.html 		: Base64 Image data example page
+		//reg_httpServer_webContent((uint8_t *)"img.html", (uint8_t *)img_page);					// img.html 		: Base64 Image data example page
 
 		// Example #1
 		//reg_httpServer_webContent((uint8_t *)"dio.html", (uint8_t *)dio_page);					// dio.html 		: Digital I/O control example page
@@ -100,7 +104,7 @@ void loadwebpages(void)
 		//reg_httpServer_webContent((uint8_t *)"ain_gauge.js", (uint8_t *)ain_gauge_js);			// ain_gauge.js 	: JavaScript for Google Gauge chart		(+ ajax.js)
 
 		// AJAX JavaScript functions
-		reg_httpServer_webContent((uint8_t *)"ajax.js", (uint8_t *)wiz550web_ajax_js);			// ajax.js			: JavaScript for AJAX request transfer
+		//reg_httpServer_webContent((uint8_t *)"ajax.js", (uint8_t *)wiz550web_ajax_js);			// ajax.js			: JavaScript for AJAX request transfer
 		
 		//favicon.ico
 		//reg_httpServer_webContent((uint8_t *)"favicon.ico", (uint8_t *)pageico);			// favicon.ico

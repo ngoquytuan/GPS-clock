@@ -13,7 +13,7 @@
 //#define NTP_PACKET_SIZE 			48
 //#define NTP_PACKET_RAWSIZE		56
 #define fractionOfSecond TIM4->CNT
-
+uint32_t countOfNTPrequest = 0;
 extern time_t timenow;
 //for NTP server
 time_t unixTime_last_sync;// = 1650858760;// lan chuan gio gan nhat 1650858760
@@ -147,7 +147,7 @@ int32_t NTPUDP(void)
                printf("%d: recvfrom error. %d\r\n",SOCK_UDPS,ret);
                return ret;
             }
-
+					countOfNTPrequest++;
 					//printf("NTP received!\r\n");
 					//unixTime_last_sync = (timenow + STARTOFTIME);
 					//unixTime_last_sync = htonl(unixTime_last_sync);

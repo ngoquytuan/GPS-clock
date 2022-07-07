@@ -27,6 +27,7 @@
 #include "stdio.h"
 #include "wizchip_conf.h"
 #include "snmp.h"
+#include "httpServer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,7 +59,7 @@ wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x2E},
 															 .gw = {0, 0, 0, 0},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
-time_t timenow = 1656557971;
+time_t built_time,timenow = 1657166407;
 struct tm* timeinfo;															 
 //SNMP
 int8_t lostSignal = 0;
@@ -67,6 +68,12 @@ uint8_t gps1_stt = 0;
 uint8_t gps2_stt = 0;
 uint8_t power1_stt = 0;
 uint8_t power2_stt = 0;	
+ uint8_t days;
+ uint8_t months;
+ uint8_t years;
+ uint8_t hours;
+ uint8_t minutes;
+ uint8_t seconds;
 //#define RXBUFFERSIZE 20															 
 uint8_t aRxBuffer[RXBUFFERSIZE];															 
 /* USER CODE END PV */
@@ -122,6 +129,7 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 	printf("This code gen by STMcube; STM32G474RBT6@160MHz\r\n");
+	built_time = timenow;
 	stm32g474_FactoryLoad();
 	w5500_lib_init();
 	ntpserverdefaultconfig();
@@ -129,7 +137,19 @@ int main(void)
 	snmp_init();
 	fractionOfSecond = 0;
 	
+	timeinfo = localtime( &timenow );
+	//printf("Current local time and date: %s\r\n", asctime(timeinfo));
+	//printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
+	//printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
+			
+	days = timeinfo->tm_mday;
+  months = 1+timeinfo->tm_mon;
+  years = timeinfo->tm_year-100;
+  hours = timeinfo->tm_hour;
+  minutes = timeinfo->tm_min;
+  seconds = timeinfo->tm_sec;
 	
+	loadwebpages();
 		
   /* USER CODE END 2 */
 

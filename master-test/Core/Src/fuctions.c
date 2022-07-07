@@ -4,6 +4,7 @@
 #include "wizchip_conf.h"
 #include "w5500.h"
 #include "snmp.h"
+#include "httpServer.h"
 #include <string.h>
 ///////////////////////////////////////////////////////////////////////
 //////////////////////// PHYStatus check //////////////////////////////
@@ -11,6 +12,7 @@
 #define MSEC_PHYSTATUS_CHECK 		1000		// msec
 uint16_t t_check_link_ms = 0;
 
+extern volatile uint32_t httpServer_tick_1s;
 extern wiz_NetInfo myipWIZNETINFO;
 extern volatile uint16_t phystatus_check_cnt;
 extern uint8_t u1Timeout;
@@ -260,6 +262,7 @@ void machGiaoTiep(void)
 		{
 			t_check_link_ms = 0;
 			checkDaymang();
+			httpServer_tick_1s++;
 		}
 		uart1_processing();
 		if(phylink != PHY_LINK_ON) return;// ko cam day mang thi ko lam gi het!!!
@@ -283,5 +286,9 @@ void machGiaoTiep(void)
 				snmpd_run2();
 				
 			}
+			// web server 	
+			httpServer_run(0);
+			httpServer_run(1);
+			httpServer_run(2);
 }
 
