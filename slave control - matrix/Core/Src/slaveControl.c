@@ -129,14 +129,16 @@ void factoryRST(void)
 	{
 		
 	}
-void loadValue(void)
+uint8_t loadValue(void)
 {
 	__IO uint32_t MemoryProgramStatus = 0;
 	__IO uint32_t data32 = 0;
 	//uint32_t Address = 0;
 	/* Check if the programmed data is OK
       MemoryProgramStatus = 0: data programmed correctly
-      MemoryProgramStatus != 0: number of words not programmed correctly ******/
+      MemoryProgramStatus != 0: number of words not programmed correctly 
+	Kiem tra DATA_32 duoc luu chua, neu luu roi nghia la bo nho ok, neu chua thi bo nho loi
+	******/
 
   MemoryProgramStatus = 0x0;
 
@@ -152,41 +154,139 @@ void loadValue(void)
 	/*Check if there is an issue to program data*/
   if (MemoryProgramStatus == 0)
   {
-    /* No error detected. Switch on LED1*/
-    //BSP_LED_On(LED1);
-		//printf("Memory is ok\r\n");
+    /* No error detected.*/
+		#ifdef DebugEnable
+		printf("Memory is ok\r\n");
+		#endif
   }
   else
   {
-    /* Error detected. Switch on LED3*/
-    //BSP_LED_On(LED3);
-		printf("Error detected \r\n");
-		return;
+    /* Error detected*/
+		#ifdef DebugEnable
+		printf("Memory Error detected \r\n");
+		#endif
+		return 0;
   }
-	
+	//LOAD IP
 	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+4);
-	//printf("first data32 %x\r\n",data32);
+	
 	
 	myipWIZNETINFO.ip[3] = (uint8_t)data32;
 	myipWIZNETINFO.ip[2] = (uint8_t)(data32>>8);
 	myipWIZNETINFO.ip[1] = (uint8_t)(data32>>16);
 	myipWIZNETINFO.ip[0] = (uint8_t)(data32>>24);	
-	//printf("Load IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
-		
+	#ifdef DebugEnable
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	printf("Load IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	#endif
+	
+	
+	//LOAD SN
 	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+8);
-	//printf("last data32 %x\r\n",data32);
-		data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+12);
-	//printf("first data32 %x\r\n",data32);
+	
+	myipWIZNETINFO.sn[3] = (uint8_t)data32;
+	myipWIZNETINFO.sn[2] = (uint8_t)(data32>>8);
+	myipWIZNETINFO.sn[1] = (uint8_t)(data32>>16);
+	myipWIZNETINFO.sn[0] = (uint8_t)(data32>>24);	
+	#ifdef DebugEnable
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	printf("Load SN: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	#endif
+	//LOAD GW
+	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+12);
+	
+	myipWIZNETINFO.gw[3] = (uint8_t)data32;
+	myipWIZNETINFO.gw[2] = (uint8_t)(data32>>8);
+	myipWIZNETINFO.gw[1] = (uint8_t)(data32>>16);
+	myipWIZNETINFO.gw[0] = (uint8_t)(data32>>24);	
+	#ifdef DebugEnable
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	printf("Load GW: %d.%d.%d.%d\r\n",myipWIZNETINFO.gw[0],myipWIZNETINFO.gw[1],myipWIZNETINFO.gw[2],myipWIZNETINFO.gw[3]);
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	#endif
+	
+	//LOAD DNS
 	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+16);
-	//printf("last data32 %x\r\n",data32);
-		data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+20);
-	//printf("first data32 %x\r\n",data32);
+	
+	myipWIZNETINFO.dns[3] = (uint8_t)data32;
+	myipWIZNETINFO.dns[2] = (uint8_t)(data32>>8);
+	myipWIZNETINFO.dns[1] = (uint8_t)(data32>>16);
+	myipWIZNETINFO.dns[0] = (uint8_t)(data32>>24);	
+	#ifdef DebugEnable
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	printf("Load GW: %d.%d.%d.%d\r\n",myipWIZNETINFO.dns[0],myipWIZNETINFO.dns[1],myipWIZNETINFO.dns[2],myipWIZNETINFO.dns[3]);
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	#endif
+	
+	return 1;
 }
-void storeValue(void)
+void saveValue(void)
+{
+	uint32_t FirstPage = 0, NbOfPages = 0, BankNumber = 0,PageError = 0;
+	FLASH_EraseInitTypeDef EraseInitStruct;
+	uint32_t Address = 0, PAGEError = 0;
+	uint64_t temp;
+	/* Unlock the Flash to enable the flash control register access *************/
+  HAL_FLASH_Unlock();
+	/* Clear OPTVERR bit set on virgin samples */
+	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGSERR);
+  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
+	/* Get the bank */
+  BankNumber = GetBank(FLASH_USER_START_ADDR);
+	
+
+  /* Fill EraseInit structure*/
+  EraseInitStruct.TypeErase = FLASH_TYPEERASE_MASSERASE;
+  EraseInitStruct.Banks     = BankNumber;
+
+  if (HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError) != HAL_OK)
+  {
+    /*
+      Error occurred while mass erase.
+      User can add here some code to deal with this error.
+      To know the code error, user can call function 'HAL_FLASH_GetError()'
+    */
+		#ifdef DebugEnable
+		printf("Error occurred while page erase.\r\n");
+    #endif
+  }
+	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGSERR);
+  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
+	temp  = 0;
+	temp |= (myipWIZNETINFO.ip[0] <<24) |(myipWIZNETINFO.ip[1] <<16)|(myipWIZNETINFO.ip[2] <<8)|myipWIZNETINFO.ip[3];
+	#ifdef DebugEnable
+  //printf("temp : %x\r\n",(myipWIZNETINFO.ip[0] <<24) +(myipWIZNETINFO.ip[1] <<16)+(myipWIZNETINFO.ip[2] <<8)+myipWIZNETINFO.ip[3]);
+	#endif
+	//DATA32 is password for check memorry good!
+	temp = DATA_32 | (temp<<32);
+    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR, temp) == HAL_OK)
+    {
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			#ifdef DebugEnable
+			printf("IP saved %llX!\r\n",temp);
+			#endif
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+    }
+   else
+    {
+      /* Error occurred while writing data in Flash memory.
+         User can add here some code to deal with this error */
+			#ifdef DebugEnable
+			printf("Error occurred while writing data in Flash memory\r\n");
+			#endif
+      
+    }
+		HAL_FLASH_Lock();
+}
+//Luu du lieu, phai luu 64 bit moi lan
+void storeValue(uint8_t length)
 {
 	uint32_t FirstPage = 0, NbOfPages = 0, BankNumber = 0,PageError = 0;
 	static FLASH_EraseInitTypeDef EraseInitStruct;
-	uint64_t temp;
+	uint64_t temp,temp2=0;
+	uint32_t t;
 	/* Unlock the Flash to enable the flash control register access *************/
   HAL_FLASH_Unlock();
 	/* Clear OPTVERR bit set on virgin samples */
@@ -218,8 +318,9 @@ void storeValue(void)
       PageError will contain the faulty page and then to know the code error on this page,
       user can call function 'HAL_FLASH_GetError()'
     */
+		#ifdef DebugEnable
 		printf("Error occurred while page erase.\r\n");
-    
+    #endif
   }
 	
 	/* Program the user Flash area word by word
@@ -229,51 +330,74 @@ void storeValue(void)
 	//temp = temp<<32;
 	temp  = 0;
 	temp |= (myipWIZNETINFO.ip[0] <<24) |(myipWIZNETINFO.ip[1] <<16)|(myipWIZNETINFO.ip[2] <<8)|myipWIZNETINFO.ip[3];
-  printf("temp : %x\r\n",(myipWIZNETINFO.ip[0] <<24) +(myipWIZNETINFO.ip[1] <<16)+(myipWIZNETINFO.ip[2] <<8)+myipWIZNETINFO.ip[3]);
+	#ifdef DebugEnable
+  //printf("temp : %x\r\n",(myipWIZNETINFO.ip[0] <<24) +(myipWIZNETINFO.ip[1] <<16)+(myipWIZNETINFO.ip[2] <<8)+myipWIZNETINFO.ip[3]);
+	#endif
+	//DATA32 is password for check memorry good!
 	temp = DATA_32 | (temp<<32);
     if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR, temp) == HAL_OK)
     {
-			printf("Saved!\r\n");
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			#ifdef DebugEnable
+			printf("IP saved %llX!\r\n",temp);
+			#endif
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
     }
    else
     {
       /* Error occurred while writing data in Flash memory.
          User can add here some code to deal with this error */
+			#ifdef DebugEnable
 			printf("Error occurred while writing data in Flash memory\r\n");
+			#endif
       
     }
 		
-		temp  = 0xFFFFFF01C0A816FC;//sn|fw
-		//temp |= (gWIZNETINFO.ip[0] <<24) |(gWIZNETINFO.ip[1] <<16)|(gWIZNETINFO.ip[2] <<8)|gWIZNETINFO.ip[3];
-		//printf("temp : %x\r\n",(gWIZNETINFO.ip[0] <<24) +(gWIZNETINFO.ip[1] <<16)+(gWIZNETINFO.ip[2] <<8)+gWIZNETINFO.ip[3]);
+		if( length > 1) //Save sn & gw
+		{
+			//temp2 = 0;
+			temp2 = (myipWIZNETINFO.gw[0] <<24) |(myipWIZNETINFO.gw[1] <<16)|(myipWIZNETINFO.gw[2] <<8)|myipWIZNETINFO.gw[3];
+			temp2 = temp2 <<32;
+			t = 0;
+			t = (myipWIZNETINFO.sn[0] <<24) |(myipWIZNETINFO.sn[1] <<16)|(myipWIZNETINFO.sn[2] <<8)|myipWIZNETINFO.sn[3];
+			temp2 = temp2|t;
+			
+			
+			if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, (FLASH_USER_START_ADDR+8), temp2) == HAL_OK)
+			{
+				#ifdef DebugEnable
+				printf("SN & GW Saved %llX\r\n",temp2);
+				#endif
+			}
+		 else
+			{
+				/* Error occurred while writing data in Flash memory.
+					 User can add here some code to deal with this error */
+				#ifdef DebugEnable
+				printf("Error occurred while writing data in Flash memory\r\n");
+				#endif
+			}
+		}
 		
-		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, (FLASH_USER_START_ADDR+8), temp) == HAL_OK)
-    {
-			printf("Saved!\r\n");
-    }
-   else
-    {
-      /* Error occurred while writing data in Flash memory.
-         User can add here some code to deal with this error */
-			printf("Error occurred while writing data in Flash memory\r\n");
-      
-    }
-		
-		temp  = 0x0808080801020304;//sn|fw
-		//temp |= (gWIZNETINFO.ip[0] <<24) |(gWIZNETINFO.ip[1] <<16)|(gWIZNETINFO.ip[2] <<8)|gWIZNETINFO.ip[3];
-		//printf("temp : %x\r\n",(gWIZNETINFO.ip[0] <<24) +(gWIZNETINFO.ip[1] <<16)+(gWIZNETINFO.ip[2] <<8)+gWIZNETINFO.ip[3]);
-		
-		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, (FLASH_USER_START_ADDR+16), temp) == HAL_OK)
-    {
-			printf("Saved!\r\n");
-    }
-   else
-    {
-      /* Error occurred while writing data in Flash memory.
-         User can add here some code to deal with this error */
-			printf("Error occurred while writing data in Flash memory\r\n");
-      
-    }
+		if( length > 2) //Save dns
+		{
+			temp2 = 0;
+			temp2 = (myipWIZNETINFO.dns[0] <<24) |(myipWIZNETINFO.dns[1] <<16)|(myipWIZNETINFO.dns[2] <<8)|myipWIZNETINFO.dns[3];			
+			if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, (FLASH_USER_START_ADDR+16), temp2) == HAL_OK)
+			{
+				#ifdef DebugEnable
+				printf("DNS Saved %llX\r\n",temp2);
+				#endif
+			}
+		 else
+			{
+				/* Error occurred while writing data in Flash memory.
+					 User can add here some code to deal with this error */
+				#ifdef DebugEnable
+				printf("Error occurred while writing data in Flash memory\r\n");
+				#endif
+			}
+		}
   
 	
 	/* Lock the Flash to disable the flash control register access (recommended
@@ -460,22 +584,64 @@ void w5500_lib_init(void){
 }
 void control(void)
 {
+	uint8_t tmp[4];
 	if(unlock_config == 1)
 	{//set all config here!!
+		if((aRxBuffer[0] =='I')&&(aRxBuffer[1] =='P')&&(aRxBuffer[7] =='.')&&(aRxBuffer[11] =='.')&&(aRxBuffer[15] =='.'))
+		{
+			//IP: 192.168.222.252\r\n;IP: 092.068.022.052\r\n
+			if((aRxBuffer[4]>'2') || (aRxBuffer[4]<'0')) return;
+			if((aRxBuffer[8]>'2') || (aRxBuffer[8]<'0')) return;	
+			if((aRxBuffer[12]>'2') || (aRxBuffer[12]<'0')) return;
+			if((aRxBuffer[16]>'2') || (aRxBuffer[16]<'0')) return;
+			
+			if((aRxBuffer[5]>'9') || (aRxBuffer[5]<'0')) return;
+			if((aRxBuffer[9]>'9') || (aRxBuffer[9]<'0')) return;	
+			if((aRxBuffer[13]>'9') || (aRxBuffer[13]<'0')) return;
+			if((aRxBuffer[17]>'9') || (aRxBuffer[17]<'0')) return;
+			
+			if((aRxBuffer[6]>'9') || (aRxBuffer[6]<'0')) return;
+			if((aRxBuffer[10]>'9') || (aRxBuffer[10]<'0')) return;	
+			if((aRxBuffer[14]>'9') || (aRxBuffer[14]<'0')) return;
+			if((aRxBuffer[18]>'9') || (aRxBuffer[18]<'0')) return;
+			
+			myipWIZNETINFO.ip[0] = 100*(aRxBuffer[4]-'0')  + 10*(aRxBuffer[5]-'0')  + (aRxBuffer[6]-'0');
+			myipWIZNETINFO.ip[1] = 100*(aRxBuffer[8]-'0')  + 10*(aRxBuffer[9]-'0')  + (aRxBuffer[10]-'0');
+			myipWIZNETINFO.ip[2] = 100*(aRxBuffer[12]-'0') + 10*(aRxBuffer[13]-'0') + (aRxBuffer[14]-'0');
+			myipWIZNETINFO.ip[3] = 100*(aRxBuffer[16]-'0') + 10*(aRxBuffer[17]-'0') + (aRxBuffer[18]-'0');
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			//storeValue(3);
+			saveValue();
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			printf("New IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			
+			//NVIC_SystemReset();
+		}
+		if((aRxBuffer[0] =='R')&&(aRxBuffer[1] =='E')&&(aRxBuffer[2] =='S')&&(aRxBuffer[3] =='E')&&(aRxBuffer[4] =='T'))
+		{
+			//Restart MCU
+			NVIC_SystemReset();
+		}
 	}
-	if((aRxBuffer[0] =='A')&&(aRxBuffer[1] =='T'))
+	else
 	{
-		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-		//printf("AT on\r\n");
-		//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-		unlock_config = 1;
+		if((aRxBuffer[0] =='A')&&(aRxBuffer[1] =='T'))
+		{
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			//printf("AT on\r\n");
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			unlock_config = 1;
+		}
+		else 
+		{
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			printf("Linh tinh\r\n");
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+		}
 	}
-	else 
-	{
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-		printf("Linh tinh\r\n");
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	}
+	
 }
 
 

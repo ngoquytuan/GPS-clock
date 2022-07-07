@@ -100,8 +100,9 @@ extern uint8_t minutes;
 extern uint8_t seconds;
 extern uint8_t aRxBuffer[RXBUFFERSIZE];
 
-void loadValue(void);
-void storeValue(void);
+uint8_t loadValue(void);
+void storeValue(uint8_t length);
+void saveValue(void);
 void w5500_lib_init(void);
 void checklink(void);
 void control(void);

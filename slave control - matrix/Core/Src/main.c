@@ -170,7 +170,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C3_Init();
   MX_TIM4_Init();
-  MX_IWDG_Init();
+  //MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
@@ -180,8 +180,17 @@ int main(void)
 	printf("This code gen by STMcube STM32G474@128MHz\r\n");
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	#endif
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 	//loadValue();
-	//storeValue();
+	if(loadValue() == 1) printf("Memory load \r\n");
+	else 
+		{
+			printf("Memory error detected,load defaut \r\n");
+			//storeValue(3);
+			saveValue();
+		}
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -196,7 +205,7 @@ int main(void)
 	laythoigian();
 	#ifdef DebugEnable
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("Time :%dh%dm%ds;%d %d/%d/%d , %d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6],nhietdo);
+	printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6]);
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	#endif
 	load_line1(days,months,years);
@@ -230,7 +239,7 @@ int main(void)
   while (1)
   {
 		HAL_IWDG_Refresh(&hiwdg);
-    t1 = fractionOfSecond;
+    //t1 = fractionOfSecond;
 		//HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 		//HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
     /* USER CODE END WHILE */
