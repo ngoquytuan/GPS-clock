@@ -1,3 +1,4 @@
+//last edit @ 7 July 2022 by tuannq
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -34,6 +35,8 @@ int32_t parseCommunity(void);
 int32_t parseVersion(void);
 int32_t parseSNMPMessage(void);
 
+uint32_t countOfSNMPrequest = 0;
+extern uint32_t countOfNTPrequest;
 // Debugging function
 #ifdef _SNMP_DEBUG_
 void dumpCode(uint8_t* header, uint8_t* tail, uint8_t *buff, int32_t len);
@@ -47,21 +50,23 @@ extern uint8_t power1_stt;
 extern uint8_t power2_stt;
 extern int8_t lostSignal;
 extern time_t timenow;
+extern time_t built_time;
 extern struct tm* timeinfo;
 
 void get_gpsStatus_all(void *ptr, uint8_t *len);
 //void currentUptime(void *ptr, uint8_t *len)
 //	{}
-void setMyValue(int value)	//snmpset -v 1 -c public 192.168.1.246 .1.3.6.1.4.1.6.1.2 i 123456
-{
-	printf("Got my value :%d\r\n",value);
-}
+//void setMyValue(int value)	//snmpset -v 1 -c public 192.168.1.246 .1.3.6.1.4.1.6.1.2 i 123456
+//{
+//	printf("Got my value :%d\r\n",value);
+//}
 /*
 void getMyValue()						//snmpget -v 1 -c public 192.168.1.246 .1.3.6.1.4.1.6.1.2
 {
 	printf("getMyValue\r\n");
 	//return 301188;
 }*/
+
 void get_GPS_stt(void *ptr, uint8_t *len);
 void get_POWER_stt(void *ptr, uint8_t *len);
 void get_GPS_stt(void *ptr, uint8_t *len)
@@ -83,6 +88,15 @@ void get_gpsmaster_time(void *ptr, uint8_t *len)
 	timeinfo = localtime( &timenow );
 	//printf("Current local time and date: %s\r\n", asctime(timeinfo));
 	*len = sprintf((char *)ptr, "Current time: %s", asctime(timeinfo));
+}
+void get_build_time(void *ptr, uint8_t *len)
+{
+	timeinfo = localtime( &built_time );
+	*len = sprintf((char *)ptr, "Build time: %s", asctime(timeinfo));
+}
+void get_ntp_snmp_services(void *ptr, uint8_t *len)
+{
+	*len = sprintf((char *)ptr, "Request time: NTP= %d;SNMP= %d;",countOfNTPrequest, countOfSNMPrequest);
 }
 dataEntryType snmpData[] =
 {
@@ -132,6 +146,12 @@ dataEntryType snmpData[] =
   {8, {0x2b, 6, 1, 4, 1, 6, 1, 3},
 	SNMPDTYPE_OCTET_STRING, 40, {""},
 	get_gpsmaster_time, NULL},
+	{8, {0x2b, 6, 1, 4, 1, 6, 1, 4},
+	SNMPDTYPE_OCTET_STRING, 40, {""},
+	get_ntp_snmp_services, NULL},
+	{8, {0x2b, 6, 1, 4, 1, 6, 1, 5},
+	SNMPDTYPE_OCTET_STRING, 40, {""},
+	get_build_time, NULL},
 
 };
 
@@ -196,7 +216,9 @@ uint32_t getSNMPTimeTick(void)
 
 void snmp_init(void)
 {
+	#ifdef _SNMP_DEBUG_
 	printf("\r\n - SNMP : Start SNMP v1 Agent\r\n");
+	#endif
 	startTime = getSNMPTimeTick(); // Start time (unit: 10ms)
 	initTable(); // Settings for OID entry values
 	SOCK_SNMP_AGENT = SOCK_agent;
@@ -218,8 +240,9 @@ void snmp_init(void)
  */
 void snmpd_init(uint8_t * managerIP, uint8_t * agentIP, uint8_t sn_agent, uint8_t sn_trap)
 {
-
+#ifdef _SNMP_DEBUG_
     printf("\r\n - SNMP : Start SNMPv1 Agent Daemon\r\n");
+#endif
     SOCK_SNMP_AGENT = sn_agent;
     SOCK_SNMP_TRAP = sn_trap;
 
@@ -288,7 +311,8 @@ int32_t snmpd_run2(void)
 				// Received message parsing and send response process
 				if (parseSNMPMessage() != -1)
 				{
-					sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);							 
+					sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
+					countOfSNMPrequest++;					
 				}
 
 #ifdef _SNMP_DEBUG_
@@ -302,10 +326,10 @@ int32_t snmpd_run2(void)
 		case SOCK_CLOSED :
 			if((ret = socket(SOCK_SNMP_AGENT, Sn_MR_UDP, PORT_SNMP_AGENT, 0x00)) != SOCK_SNMP_AGENT)
 				return ret;
-
+#ifdef _SNMP_DEBUG_
 			printf(" Socket[%d] UDP Socket for SNMP Agent, port [%d]\r\n", SOCK_SNMP_AGENT, PORT_SNMP_AGENT);
 			//printf(" Socket[%d] UDP Socket for SNMP Trap , port [%d]\r\n", SOCK_SNMP_TRAP,  PORT_SNMP_TRAP);
-
+#endif
 			break;
 
 		default :
@@ -361,10 +385,10 @@ int32_t snmpd_run(void)
 				{
 					ret = sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
 					
-					printf("sent \r\n");
+					//printf("sent \r\n");
 					if(ret < 0)
                {
-                  printf("S %d: sendto error. %d\r\n",SOCK_SNMP_AGENT,ret);
+                  //printf("S %d: sendto error. %d\r\n",SOCK_SNMP_AGENT,ret);
                   return ret;
                }
 				}
@@ -384,10 +408,9 @@ int32_t snmpd_run(void)
 		case SOCK_CLOSED :
 			if((ret = socket(SOCK_SNMP_AGENT, Sn_MR_UDP, PORT_SNMP_AGENT, 0x00)) != SOCK_SNMP_AGENT)
 				return ret;
-
+#ifdef _SNMP_DEBUG_
 			printf(" Socket[%d] UDP Socket for SNMP Agent, port [%d]\r\n", SOCK_SNMP_AGENT, PORT_SNMP_AGENT);
-			//printf(" Socket[%d] UDP Socket for SNMP Trap , port [%d]\r\n", SOCK_SNMP_TRAP,  PORT_SNMP_TRAP);
-
+#endif
 			break;
 
 		default :

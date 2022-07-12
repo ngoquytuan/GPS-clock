@@ -33,6 +33,26 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #define DebugEnable
 
+#define ADDR_FLASH_PAGE_47    ((uint32_t)0x08017800) /* Base @ of Page 47, 2 Kbytes */
+#define ADDR_FLASH_PAGE_48    ((uint32_t)0x08018000) /* Base @ of Page 48, 2 Kbytes */
+#define ADDR_FLASH_PAGE_49    ((uint32_t)0x08018800) /* Base @ of Page 49, 2 Kbytes */
+#define ADDR_FLASH_PAGE_59    ((uint32_t)0x0801D800) /* Base @ of Page 59, 2 Kbytes */
+#define ADDR_FLASH_PAGE_60    ((uint32_t)0x0801E000) /* Base @ of Page 60, 2 Kbytes */
+#define ADDR_FLASH_PAGE_61    ((uint32_t)0x0801E800) /* Base @ of Page 61, 2 Kbytes */
+
+#define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_59   /* Start @ of user Flash area */
+#define FLASH_USER_END_ADDR     (ADDR_FLASH_PAGE_60 + FLASH_PAGE_SIZE - 1)   /* End @ of user Flash area */
+
+typedef struct {
+	uint8_t ip[4];
+	uint8_t sn[4];
+	uint8_t gw[4];
+	uint8_t dns[4];
+	uint32_t keyword;
+	uint32_t LED_intensity;
+} dataSave;		
+#define myMem ((dataSave *) FLASH_USER_START_ADDR)
+
 /* Size of Reception buffer */
 #define RXBUFFERSIZE                      100
 
@@ -99,10 +119,14 @@ extern uint8_t hours;
 extern uint8_t minutes;
 extern uint8_t seconds;
 extern uint8_t aRxBuffer[RXBUFFERSIZE];
+extern uint8_t LEDintensity;
+extern UART_HandleTypeDef huart2;
+extern uint32_t timct;
 
-uint8_t loadValue(void);
-void storeValue(uint8_t length);
-void saveValue(void);
+
+void stm32g474flashEraseThenSave(void);
+void stm32g474_FactoryLoad(void);
+
 void w5500_lib_init(void);
 void checklink(void);
 void control(void);
@@ -113,9 +137,11 @@ void scan_5down(void);
 void load_line2(uint8_t dis_hour,uint8_t dis_min,uint8_t dis_sec,uint8_t dot);
 void line2_matrix_init (void);
 void chinhdosang(void);
+void led_matrix_fucs_init(void);
+void led_matrix_fucs(void);
+void SNTP_init(void);		
+int8_t SNTP_run(void);	
 
-
-void RTC_factory_RST(void);
 void RTC_Update(void);
 //define for DS3231
 #define DS_SECOND_REG 0

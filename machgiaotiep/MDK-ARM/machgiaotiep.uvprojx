@@ -459,11 +459,6 @@
               <FileType>1</FileType>
               <FilePath>..\Core\Src\stm32g4mem.c</FilePath>
             </File>
-            <File>
-              <FileName>ConfigData.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\user\ethernet\httpServer\ConfigData.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>

@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G474xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../Core/Src/user/ethernet;../Core/Src/user</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../Core/Src/user/ethernet;../Core/Src/user;..\Core\Src\user\ethernet\httpServer;..\Core\Src\user\SNMP</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -437,6 +437,31 @@
               <FileName>stm32g4xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32g4xx_hal_msp.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32g4mem.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\stm32g4mem.c</FilePath>
+            </File>
+            <File>
+              <FileName>httpServer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\user\ethernet\httpServer\httpServer.c</FilePath>
+            </File>
+            <File>
+              <FileName>httpParser.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\user\ethernet\httpServer\httpParser.c</FilePath>
+            </File>
+            <File>
+              <FileName>httpUtil.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\user\ethernet\httpServer\httpUtil.c</FilePath>
+            </File>
+            <File>
+              <FileName>snmp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\user\SNMP\snmp.c</FilePath>
             </File>
           </Files>
         </Group>

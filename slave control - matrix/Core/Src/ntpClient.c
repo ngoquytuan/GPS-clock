@@ -8,7 +8,7 @@
 
 #define ntpClientDebug
 #define	MAX_SNTP_BUF_SIZE	sizeof(ntpformat)		///< maximum size of DNS buffer. */
-	
+uint32_t countOfNTPrequest = 0;	
 /* for ntpclient */
 typedef signed char s_char;
 typedef unsigned long long tstamp;
@@ -199,7 +199,7 @@ int8_t SNTP_run(void)//datetime sntp;
 				{
 					RetrySend = 0;
 					sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
-					
+					countOfNTPrequest++;
 					//sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
 #ifdef			ntpClientDebug		
 					printf("NTP ask for time sent");					

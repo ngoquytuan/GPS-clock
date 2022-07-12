@@ -1,6 +1,6 @@
 #include "main.h"
 #include <string.h>
-uint8_t LEDintensity;
+uint8_t LEDintensity = 2;
 #define LOAD2_LOW    HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);
 #define LOAD2_HIGH   HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 
@@ -704,8 +704,7 @@ void up7_matrix_init (void)
 void chinhdosang(void)
 	{
 		uint32_t i;
-		LEDintensity++;
-		if(LEDintensity > 15) LEDintensity =1;
+		
 		
 		HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);
 		up7_matrix_SendAdd(intensity,LEDintensity); //intensity

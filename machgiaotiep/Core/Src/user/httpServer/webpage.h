@@ -1,3 +1,4 @@
+//last edit by Tuannq 07July2022
 #ifndef _WEBPAGE_H_
 #define _WEBPAGE_H_
 
@@ -210,49 +211,24 @@
 		"<style>"\
 			"body{font-family: Arial, Tahoma;font-size: 14px;}"\
  			"h1{color:black;font-size:18px;text-align:center;}"\
-			".btn {display: block;text-align: center;cursor: pointer;text-transform: uppercase;overflow: hidden;color: #fff;background-color: #D2691E;height: 30px;width: 80px;margin: auto;border-radius: 10pt}"\
+			".btn {display: block;text-align: center;cursor: pointer;color: #fff;background-color: #D2691E;height: 30px;width: 80px;margin: auto;border-radius: 10pt}"\
 			".btn:hover {background-color: #E9967A;}"\
 			".tab{font-family:Arial; width: 498px; align : center; border: 0px; cellpadding:5px; cellspacing: 0px; height:50px;}"\
 			".sts_label{border: none;color: black;font-size: 15px;height: 30px;width: 60px;background: #F5F5DC;}"\
 			"#clock_info{height: 140px;border: 1px solid #CDCDCD;background-color: #F5F5DC;margin-bottom:5px;clear: both;text-align:center;}"\
 			"#clockdiv{color: #fff;display: inline-block;font-weight: 100px;text-align: center;font-size: 30px;}"\
 			"#clockdiv > div{padding: 10px;border-radius: 3px;background: #00BF96;display: inline-block;text-align: center; height:70px;width: 55px;}"\
-			".clock_label{padding: 5px;border-radius: 3px;background: #00816A;display: inline-block; height: 20px; width: 40px; color:white;overflow: hidden;font-weight: bold; font-size: 16px;text-align: center;}"\
+			".clock_label{padding: 5px;border-radius: 3px;background: #00816A;display: inline-block; height: 20px; width: 40px; color:white;font-weight: bold; font-size: 16px;text-align: center;}"\
 			".smalltext{padding-top: 5px;font-size: 16px;}"\
 			"#main{width: 500px;border: 1px solid #6495ED;padding: 0;margin-left: auto;margin-right: auto;}"\
-			"#head{border: 1px solid #CDCDCD;height: 70px;background-color:#008800;color:white;overflow: hidden;font-weight: bold;font-size:30px;text-align:center;margin-bottom:5px;}"\
+			"#head{border: 1px solid #CDCDCD;height: 70px;background-color:#008800;color:white;font-weight: bold;font-size:30px;text-align:center;margin-bottom:5px;}"\
 			"#net_info_general{min-height: 150px;border: 1px solid #CDCDCD;float:left;margin-bottom:5px;background-color: #F5F5DC;}"\
 			"#list_head{background-color:#FFCC99;height: 40px;width: 100%; display: inline-block;font-size: 18px;}"\
 			"#info{height: 90px;border: 1px solid #CDCDCD;background-color: #F5F5DC;margin-bottom:5px;clear: both;}"\
-			"#foot{background-color: #0099FF;border:1px solid #ccc;color:black;font-size:15px;height: 20px;overflow: hidden;padding-top: 5px;padding-bottom: 5px;text-align:center;}"\
+			"#foot{background-color: #0099FF;border:1px solid #ccc;color:black;font-size:15px;height: 20px;padding-top: 5px;padding-bottom: 5px;text-align:center;}"\
 		"</style>"\
 	"</head>"\
-		"<script>"\
-			"function calldata(){"\
-				"var xhttp = new XMLHttpRequest();"\
-				"xhttp.onreadystatechange = function() {"\
-					"if (this.readyState == 4 && this.status == 200) {"\
-						"var txt = this.responseText;"\
-						"var obj = JSON.parse(txt);"\
-						"document.getElementById('txtip').value = obj.txtip;"\
-						"document.getElementById('txtsn').value = obj.txtsn;"\
-						"document.getElementById('txtdays').value = obj.txtdays;"\
-						"document.getElementById('txtmonths').value = obj.txtmonths;"\
-						"document.getElementById('txtyears').value = obj.txtyears;"\
-						"document.getElementById('txthours').value = obj.txthours;"\
-						"document.getElementById('txtminutes').value =obj.txtminutes;"\
-						"document.getElementById('txtseconds').value = obj.txtseconds;"\
-						"document.getElementById('txtgps01').value = obj.txtgps01;"\
-						"document.getElementById('txtgps02').value = obj.txtgps02;"\
-						"document.getElementById('txtpower01').value = obj.txtpower01;"\
-						"document.getElementById('txtpower02').value = obj.txtpower02;"\
-					"}"\
-				"};"\
-				"xhttp.open('GET', 'alldata.json', true); "\
-				"xhttp.send();"\
-			"}"\
-		"</script>"\
-	"<body onload=\"calldata();setInterval('calldata()', 500)\">"\
+	"<body>"\
 		"<div id='main'>"\
 			"<div id='head'>"\
 				"GPS MASTER CLOCK CONFIGURATION"\
@@ -277,7 +253,7 @@
 			"</div>"\
 			"<div id = 'clock_info'>"\
 				"<div id = 'list_head'>"\
-					"<h1>GPS time</h1>"\
+					"<h1>GPS time(UTC)</h1>"\
 				"</div>"\
 				"<table type ='table' class='tab'>"\
 					"<tbody>"\
@@ -286,27 +262,27 @@
 								"<div id='clockdiv'>"\
 									"<div>"\
 										"<input type='text' class='clock_label' id='txtdays' name='days' disabled='disabled' value=' '/>"\
-										"<div class='smalltext'>Days</div>"\
+										"<div class='smalltext'>Day</div>"\
 									"</div>"\
 									"<div>"\
 										"<input type='text' class='clock_label' id='txtmonths' name='months' disabled='disabled' value=' '/>"\
-										"<div class='smalltext'>Months</div>"\
+										"<div class='smalltext'>Month</div>"\
 									"</div>"\
 									"<div>"\
 										"<input type='text' class='clock_label' id='txtyears' name='years' disabled='disabled' value=' '/>"\
-										"<div class='smalltext'>Years</div>"\
+										"<div class='smalltext'>Year</div>"\
 									"</div>"\
 									"<div>"\
 										"<input type='text' class='clock_label' id='txthours' name='hours' disabled='disabled' value=' '/>"\
-										"<div class='smalltext'>Hours</div>"\
+										"<div class='smalltext'>Hour</div>"\
 									"</div>"\
 									"<div>"\
 										"<input type='text' class='clock_label' id='txtminutes' name='minutes' disabled='disabled' value=' '/>"\
-										"<div class='smalltext'>Minutes</div>"\
+										"<div class='smalltext'>Minute</div>"\
 									"</div>"\
 									"<div>"\
 										"<input type='text' class='clock_label' id='txtseconds' name='seconds' disabled='disabled' value=' '/>"\
-										"<div class='smalltext'>Seconds</div>"\
+										"<div class='smalltext'>Second</div>"\
 									"</div>"\
 								"</div>"\
 							"</td>"\
@@ -366,13 +342,39 @@
 				"Powered by <a style='color: #000000; font-weight: bold; text-decoration: none'>Air Traffic Technical Company - <span style='color:red'>A</span><span style='color: blue;'>TTECH</span></a>"\
 			"</div>"\
 		"</div>"\
+		"<script>"\
+			"setInterval(calldata, 1000);"\
+			"function calldata(){"\
+				"var xhttp = new XMLHttpRequest();"\
+				"xhttp.onreadystatechange = function() {"\
+					"if (this.readyState == 4 && this.status == 200) {"\
+						"var txt = this.responseText;"\
+						"var obj = JSON.parse(txt);"\
+						"document.getElementById('txtip').value = obj.txtip;"\
+						"document.getElementById('txtsn').value = obj.txtsn;"\
+						"document.getElementById('txtdays').value = obj.txtdays;"\
+						"document.getElementById('txtmonths').value = obj.txtmonths;"\
+						"document.getElementById('txtyears').value = obj.txtyears;"\
+						"document.getElementById('txthours').value = obj.txthours;"\
+						"document.getElementById('txtminutes').value =obj.txtminutes;"\
+						"document.getElementById('txtseconds').value = obj.txtseconds;"\
+						"document.getElementById('txtgps01').value = obj.txtgps01;"\
+						"document.getElementById('txtgps02').value = obj.txtgps02;"\
+						"document.getElementById('txtpower01').value = obj.txtpower01;"\
+						"document.getElementById('txtpower02').value = obj.txtpower02;"\
+					"}"\
+				"};"\
+				"xhttp.open('GET', 'alldata.json', true); "\
+				"xhttp.send();"\
+			"}"\
+		"</script>"\
 	"</body>"\
 "</html>"
 
 #define netinfo_page 		"<!DOCTYPE html>"\
 							"<html>"\
 								"<head>"\
-								"<title>W5500-EVB Web Server Network Info</title>"\
+								"<title>GPS master clock web Server Network config</title>"\
 								"<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"\
 								"<style>"\
 								"label{float:left;text-align:left;width:50px;}"\
@@ -383,7 +385,7 @@
 								"</head>"\
 								"<body onload='getNetinfo();'>"\
 									"<div>"\
-									"W5500-EVB Web Server Network Information"\
+									"GPS master clock web Server Network config"\
 									"</div>"\
 									"<br>"\
 									"<ul>"\
@@ -492,7 +494,7 @@
 								"</body>"\
 							"</html>"
 							
-#define configpage		"<!DOCTYPE html>"\
+#define configpage			"<!DOCTYPE html>"\
 "<html>"\
 	"<head>"\
 	"<title>GPS Master clock configuration</title>"\
@@ -521,7 +523,7 @@
 							"<tbody>"\
 								"<tr>"\
 									"<td>IP adress:&nbsp</td>"\
-									"<td colspan='2'><input id='txtip' name='ip' type='text' value='192.168.1.246'/></td>"\
+									"<td colspan='2'><input id='txtip' name='ip' type='text' value='192.168.1.39'/></td>"\
 								"</tr>"\
 								"<tr>"\
 									"<td>Subnet mask:&nbsp</td>"\
@@ -544,5 +546,43 @@
 		"</div>"\
 	"</body>"\
 "</html>"
+
+#define fullconfigpage			"<!DOCTYPE html>"\
+							"<html>"\
+								"<head>"\
+								"<title>GPS master clock web Server Network config</title>"\
+								"<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"\
+								"<style>"\
+								"label{float:left;text-align:left;width:50px;}"\
+								"li {list-style:none;}"\
+								"</style>"\
+								"</head>"\
+								"<body>"\
+								"<FORM METHOD='POST' action='config.cgi'><br>"\
+									"<div>"\
+									"W5500-STM32 Web Server Network Information"\
+									"</div>"\
+									"<br>"\
+									"<ul>"\
+										"<li><label for='ip'>IP:</label><input id='txtip' name='ip' type='text' size='20' value=\"192.168.1.39\"></li> "\
+										"<li><label for='gw'>GW:</label><input id='txtgw' name='gw' type='text' size='20' value=\"0.0.0.0\"></li> "\
+										"<li><label for='sn'>SN:</label><input id='txtsn' name='sn' type='text' size='20' value=\"255.255.255.0\"></li> "\
+										"<li><label for='txtdns'>DNS:</label><input id='txtdns' name='dns' type='text' size='20' value=\"0.0.0.0\"></li> "\
+										"<input type=\"submit\" value=\"SAVE\">"\
+									"</ul>"\
+								"</body>"\
+							"</html>"
+#define fullconfigpageold			"<!DOCTYPE html>"\
+"<html>"\
+"<body><CENTER>"\
+"<h3>IP config</h3>"\
+"<FORM METHOD='POST' action='config.cgi'><br>"\
+"<input type=\"text\" name=\"ip\" value=\"192.168.1.39\"> DeviveIP<br>"\
+"<input type=\"text\" name=\"gw\" value=\"0.0.0.0\"> Getway<br>"\
+"<input type=\"text\" name=\"sn\" value=\"255.255.255.0\"> Subnet <br>"\
+"<input type=\"submit\" value=\"SAVE\">"\
+"</form>"\
+"</CENTER></body>"\
+"</html>"\
 
 #endif

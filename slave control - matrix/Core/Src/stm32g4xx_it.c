@@ -41,10 +41,10 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+uint32_t timct=0;
+volatile uint32_t snmp_tick_1ms = 0;
 extern uint8_t u2Timeout;
-extern uint32_t timct;
-extern volatile uint16_t phystatus_check_cnt;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -241,9 +241,10 @@ void TIM3_IRQHandler(void)
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
+	snmp_tick_1ms++;
   timct++;
 	if(u2Timeout>1) u2Timeout--;
-	phystatus_check_cnt++;
+	
   /* USER CODE END TIM3_IRQn 1 */
 }
 

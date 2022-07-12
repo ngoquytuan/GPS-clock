@@ -1,3 +1,4 @@
+//last edit by Tuannq 07July2022
 #ifndef _WEBPAGE_H_
 #define _WEBPAGE_H_
 
@@ -373,7 +374,7 @@
 #define netinfo_page 		"<!DOCTYPE html>"\
 							"<html>"\
 								"<head>"\
-								"<title>W5500-STM32 Web Server Network Info</title>"\
+								"<title>GPS master clock web Server Network config</title>"\
 								"<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"\
 								"<style>"\
 								"label{float:left;text-align:left;width:50px;}"\
@@ -384,7 +385,7 @@
 								"</head>"\
 								"<body onload='getNetinfo();'>"\
 									"<div>"\
-									"W5500-STM32 Web Server Network Information"\
+									"GPS master clock web Server Network config"\
 									"</div>"\
 									"<br>"\
 									"<ul>"\
@@ -547,6 +548,31 @@
 "</html>"
 
 #define fullconfigpage			"<!DOCTYPE html>"\
+							"<html>"\
+								"<head>"\
+								"<title>GPS master clock web Server Network config</title>"\
+								"<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"\
+								"<style>"\
+								"label{float:left;text-align:left;width:50px;}"\
+								"li {list-style:none;}"\
+								"</style>"\
+								"</head>"\
+								"<body>"\
+								"<FORM METHOD='POST' action='config.cgi'><br>"\
+									"<div>"\
+									"W5500-STM32 Web Server Network Information"\
+									"</div>"\
+									"<br>"\
+									"<ul>"\
+										"<li><label for='ip'>IP:</label><input id='txtip' name='ip' type='text' size='20' value=\"192.168.1.39\"></li> "\
+										"<li><label for='gw'>GW:</label><input id='txtgw' name='gw' type='text' size='20' value=\"0.0.0.0\"></li> "\
+										"<li><label for='sn'>SN:</label><input id='txtsn' name='sn' type='text' size='20' value=\"255.255.255.0\"></li> "\
+										"<li><label for='txtdns'>DNS:</label><input id='txtdns' name='dns' type='text' size='20' value=\"0.0.0.0\"></li> "\
+										"<input type=\"submit\" value=\"SAVE\">"\
+									"</ul>"\
+								"</body>"\
+							"</html>"
+#define fullconfigpageold			"<!DOCTYPE html>"\
 "<html>"\
 "<body><CENTER>"\
 "<h3>IP config</h3>"\

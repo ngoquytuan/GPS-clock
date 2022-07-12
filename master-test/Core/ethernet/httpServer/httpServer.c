@@ -104,7 +104,7 @@ void loadwebpages(void)
 		//reg_httpServer_webContent((uint8_t *)"ain_gauge.js", (uint8_t *)ain_gauge_js);			// ain_gauge.js 	: JavaScript for Google Gauge chart		(+ ajax.js)
 
 		// AJAX JavaScript functions
-		//reg_httpServer_webContent((uint8_t *)"ajax.js", (uint8_t *)wiz550web_ajax_js);			// ajax.js			: JavaScript for AJAX request transfer
+		reg_httpServer_webContent((uint8_t *)"ajax.js", (uint8_t *)wiz550web_ajax_js);			// ajax.js			: JavaScript for AJAX request transfer
 		
 		//favicon.ico
 		//reg_httpServer_webContent((uint8_t *)"favicon.ico", (uint8_t *)pageico);			// favicon.ico
@@ -556,7 +556,7 @@ static void http_process_handler(uint8_t s, st_http_request * p_http_request)
 	uint16_t content_num = 0;
 	uint32_t file_len = 0;
 
-	uint8_t post_name[32]={0x00,};	// POST method request file name
+	//uint8_t post_name[32]={0x00,};	// POST method request file name
 	uint8_t uri_buf[MAX_URI_SIZE]={0x00, };
 
 	uint16_t http_status;
@@ -597,22 +597,26 @@ static void http_process_handler(uint8_t s, st_http_request * p_http_request)
 			printf("> HTTPSocket[%d] : Request Type = %d\r\n", s, p_http_request->TYPE);
 			printf("> HTTPSocket[%d] : Request URI = %s\r\n", s, uri_name);
 #endif
-			printf("> HTTPSocket[%d] : Request %s\r\n", s, uri_name);
+			//printf("> HTTPSocket[%d] : Request %s\r\n", s, uri_name);
 			//Xu ly cho tung kieu du lieu, html, cgi....?
 			if(p_http_request->TYPE == PTYPE_CGI)//https://en.wikipedia.org/wiki/Common_Gateway_Interface
 			{
+				//printf("PTYPE_CGI\r\n");
 				content_found = http_get_cgi_handler(uri_name, pHTTP_TX, &file_len);
 				if(content_found && (file_len <= (DATA_BUF_SIZE-(strlen(RES_CGIHEAD_OK)+8))))
 				{
 					send_http_response_cgi(s, http_response, pHTTP_TX, (uint16_t)file_len);
+					//printf("SENT CGI\r\n");
 				}
 				else
 				{
 					send_http_response_header(s, PTYPE_CGI, 0, STATUS_NOT_FOUND);
+					//printf("NO CGI\r\n");
 				}
 			}
 			else if(p_http_request->TYPE == PTYPE_JSON)
 			{
+				//printf("PTYPE_JSON\r\n");
 				//uri_name : abc.json
 				//pHTTP_TX : /abc.json
 				//printf("Send back json file\r\n");
@@ -630,7 +634,9 @@ static void http_process_handler(uint8_t s, st_http_request * p_http_request)
 				}
 			}
 			else
-			{// If No CGI request, Try to find The requested web content in storage (e.g., 'SD card' or 'Data flash')
+			{ 
+				//printf("Other type\r\n");
+				// If No CGI request, Try to find The requested web content in storage (e.g., 'SD card' or 'Data flash')
 				// Find the User registered index for web content : Tim xem trong list ban dau co ko?
 				if(find_userReg_webContent(uri_buf, &content_num, &file_len))
 				{
@@ -668,6 +674,7 @@ static void http_process_handler(uint8_t s, st_http_request * p_http_request)
 
 				if(!content_found)
 				{
+					//printf("> HTTPSocket[%d] : Unknown Page Request\r\n", s);
 #ifdef _HTTPSERVER_DEBUG_
 					printf("> HTTPSocket[%d] : Unknown Page Request\r\n", s);
 #endif
@@ -675,6 +682,7 @@ static void http_process_handler(uint8_t s, st_http_request * p_http_request)
 				}
 				else
 				{
+					//printf("> HTTPSocket[%d] : Find Content [%s] ok - Start [%u] len [ %u ]byte\r\n", s, uri_name, content_addr, file_len);
 #ifdef _HTTPSERVER_DEBUG_
 					printf("> HTTPSocket[%d] : Find Content [%s] ok - Start [%u] len [ %u ]byte\r\n", s, uri_name, content_addr, file_len);
 #endif
@@ -702,7 +710,8 @@ static void http_process_handler(uint8_t s, st_http_request * p_http_request)
 			mid((char *)p_http_request->URI, "/", " HTTP", (char *)uri_buf);
 			uri_name = uri_buf;
 			find_http_uri_type(&p_http_request->TYPE, uri_name);	// Check file type (HTML, TEXT, GIF, JPEG are included)
-
+			
+		
 #ifdef _HTTPSERVER_DEBUG_
 			printf("\r\n> HTTPSocket[%d] : HTTP Method POST\r\n", s);
 			printf("> HTTPSocket[%d] : Request URI = %s", s, uri_name);
@@ -729,7 +738,7 @@ static void http_process_handler(uint8_t s, st_http_request * p_http_request)
 			}
 			else if(!strcmp((char *)uri_name,"postForm"))//bat url postForm va xu ly => tuan tu viet doan nay
 			{
-				printf(" Got postForm\r\n");
+				//printf(" Got postForm\r\n");
 				send_http_response_header(s, 0, 0, STATUS_NOT_FOUND);
 			}
 			else	// HTTP POST Method; Content not found

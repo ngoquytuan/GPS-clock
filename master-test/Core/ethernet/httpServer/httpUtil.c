@@ -38,12 +38,11 @@ extern uint8_t seconds;
 
 extern int8_t lostSignal;
 // Pre-defined Get CGI functions
-//void make_json_dio(uint8_t * buf, uint16_t * len, uint8_t pin);
-//void make_json_ain(uint8_t * buf, uint16_t * len, uint8_t pin);
+
 void make_json_netinfo(uint8_t * buf, uint16_t * len);
 
 
-uint8_t new_device_ip[4];
+
 void make_json_netinfo2(uint8_t * buf, uint16_t * len)
 {
 	wiz_NetInfo netinfo;
@@ -87,10 +86,10 @@ uint8_t http_get_json_handler(uint8_t * uri_name, uint8_t * buf, uint32_t * file
 		make_json_netinfo(buf, &len);
 		;
 	}
-	else if(strcmp((const char *)uri_name, "get_serial_data.cgi") == 0)
-	{
-		//make_json_serial_data(buf, &len);
-	}
+//	else if(strcmp((const char *)uri_name, "get_serial_data.cgi") == 0)
+//	{
+//		//make_json_serial_data(buf, &len);
+//	}
 	else
 	{
 		// CGI file not found
@@ -111,19 +110,25 @@ uint8_t http_get_cgi_handler(uint8_t * uri_name, uint8_t * buf, uint32_t * file_
 //		;
 //	}
 //	else 
-//	
-	if(strcmp((const char *)uri_name, "example.cgi") == 0)
+//
+	if(strcmp((const char *)uri_name, "get_netinfo.cgi") == 0)
+	{
+		make_json_netinfo2(buf, &len);
+		//printf("get_netinfo.cgi\r\n");
+	}	
+	else if(strcmp((const char *)uri_name, "example.cgi") == 0)
 	{
 		// To do
 		;
 	}
-	else if(strcmp((const char *)uri_name, "get_serial_data.cgi") == 0)
-	{
-		//make_json_serial_data(buf, &len);
-	}
+//	else if(strcmp((const char *)uri_name, "get_serial_data.cgi") == 0)
+//	{
+//		//make_json_serial_data(buf, &len);
+//	}
 	else
 	{
 		// CGI file not found
+		//printf("CGI file not found\r\n");
 		ret = HTTP_FAILED;
 	}
 
@@ -169,7 +174,7 @@ void make_cgi_basic_config_response_page(uint16_t delay, uint8_t * url, uint8_t 
 	//printf("Open gateway: %d.%d.%d.%d\r\n",value->network_info_common.gateway[0],value->network_info_common.gateway[1],value->network_info_common.gateway[2],value->network_info_common.gateway[3]);
 	//printf("Open subnet: %d.%d.%d.%d\r\n",value->network_info_common.subnet[0],value->network_info_common.subnet[1],value->network_info_common.subnet[2],value->network_info_common.subnet[3]);
 	
-	*len = sprintf((char *)cgi_response_buf,"<html><head><title>WIZ550web - Configuration</title><script language=javascript>j=%d;function func(){document.getElementById('delay').innerText=' '+j+' ';if(j>0)j--;setTimeout('func()',1000);if(j<=0)location.href='http://%d.%d.%d.%d';}</script></head><body onload='func()'>Please wait for a while, the module will boot in<span style='color:red;' id='delay'></span> seconds.</body></html>", delay, url[0], url[1], url[2], url[3]);
+	*len = sprintf((char *)cgi_response_buf,"<html><head><title>Network Configuration</title><script language=javascript>j=%d;function func(){document.getElementById('delay').innerText=' '+j+' ';if(j>0)j--;setTimeout('func()',1000);if(j<=0)location.href='http://%d.%d.%d.%d';}</script></head><body onload='func()'>Please wait for a while, the module will boot in<span style='color:red;' id='delay'></span> seconds.</body></html>", delay, url[0], url[1], url[2], url[3]);
 	//printf("\r\n%s\r\n",cgi_response_buf);
 	return;
 }
@@ -190,14 +195,15 @@ uint8_t predefined_set_cgi_processor(uint8_t * uri_name, uint8_t * uri, uint8_t 
 		//val = set_diodir(uri);
 		*len = sprintf((char *)buf, "%d", val);
 	}
-	else if(strcmp((const char *)uri_name, "set_diostate.cgi") == 0)
-	{
-		//val = set_diostate(uri);
-		*len = sprintf((char *)buf, "%d", val);
-	}
+//	else if(strcmp((const char *)uri_name, "set_diostate.cgi") == 0)
+//	{
+//		//val = set_diostate(uri);
+//		*len = sprintf((char *)buf, "%d", val);
+//	}
 	else
 	{
 		ret = 0;
+		//printf("predefined_set_cgi_processor not found\r\n");
 	}
 
 	return ret;
@@ -208,13 +214,14 @@ uint8_t http_post_cgi_handler(uint8_t * uri_name, st_http_request * p_http_reque
 	uint8_t ret = HTTP_OK;
 	uint16_t len = 0;
 	uint8_t val = 0;
-	uint8_t* newip;
+
 
 //	if(predefined_set_cgi_processor(uri_name, p_http_request->URI, buf, &len))
 //	{
 //		;
 //	}
 //	else 
+	
 	if(strcmp((const char *)uri_name, "config.cgi") == 0)
 	{
 		
@@ -228,6 +235,7 @@ uint8_t http_post_cgi_handler(uint8_t * uri_name, st_http_request * p_http_reque
 	else
 	{
 		// CGI file not found
+		//printf("CGI file not found\r\n");
 		ret = HTTP_FAILED;
 	}
 
@@ -253,12 +261,12 @@ void make_json_netinfo(uint8_t * buf, uint16_t * len)
 											netinfo.sn[0], netinfo.sn[1], netinfo.sn[2], netinfo.sn[3],
 											netinfo.dns[0], netinfo.dns[1], netinfo.dns[2], netinfo.dns[3],
 											netinfo.dhcp,
-											0,
-											0,
-											0,
-											0,
-											0,
-											0,
+											days,
+											months,
+											years,
+											hours,
+											minutes,
+											seconds,
 											gps1_stt?"NO SIGNAL":"NO SIGNAL",
 											gps2_stt?"NO SIGNAL":"NO SIGNAL",
 											power1_stt?"NO SIGNAL":"NO SIGNAL",

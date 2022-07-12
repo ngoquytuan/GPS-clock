@@ -98,7 +98,7 @@ void w5500_lib_init(void){
 		/* SPI Read & Write callback function */
     reg_wizchip_spi_cbfunc(wizchip_read, wizchip_write);
 		reg_wizchip_spiburst_cbfunc(wizchip_readburst, wizchip_writeburst);
-		//GPIO_SetBits(W5500_RST_GPIO, W5500_RST);//RST High to run
+		//RST High to run
 		HAL_GPIO_WritePin(RSTn_GPIO_Port, RSTn_Pin, GPIO_PIN_SET);
 		HAL_Delay(100);
 		
@@ -158,7 +158,7 @@ uint8_t checkDaymang(void)
 
 void control(uint8_t* uartcmd)
 {
-	uint8_t tmp[4];
+	//uint8_t tmp[4];
 	if(unlock_config == 1)
 	{//set all config here!!
 		if((uartcmd[0] =='I')&&(uartcmd[1] =='P')&&(uartcmd[7] =='.')&&(uartcmd[11] =='.')&&(uartcmd[15] =='.'))

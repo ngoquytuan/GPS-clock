@@ -1,19 +1,38 @@
 #include "main.h"
-#include "storevalue.h"
+#include <time.h>
+#include <string.h>
 #include "stdio.h"
 #include "wizchip_conf.h"
+#include "snmp.h"
+#include "httpServer.h"
 
-static uint32_t GetPage(uint32_t Address);
-static uint32_t GetBank(uint32_t Address);
+slave_status slave_clock;
+#define fractionOfSecond TIM4->CNT
+uint8_t u2Timeout = 0;
+
+
 static uint8_t unlock_config =0;
 #define MSEC_PHYSTATUS_CHECK 		1000		// msec
 #define PHYStatus_check_enable 1
 
+//NTP client
+extern uint16_t RetrySend ; //60 giay
+extern uint16_t sycnPeriod ;// 1 gio
 
+extern time_t timenow;
 extern wiz_NetInfo myipWIZNETINFO;
 extern volatile uint16_t phystatus_check_cnt;
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c3;
+extern struct tm currtime;
+uint8_t rtc_timeout = 30;
+int8_t haveSignalFromRS485 = NO_SIGNAL;
+int8_t stableSignal = SIGNAL_FROM_MASTER_BAD;
+int8_t count_Stable_signal = 0;
+int8_t timeOutLostSignal = 0;
+//Thoi gian luu gio tu RS485 vao RTC
+int16_t timeSaveRS485_to_RTC = 60;
+
 
 //----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
 //Phai pull up SDA SCL
@@ -63,45 +82,7 @@ void ghids(unsigned char add, unsigned char dat)
 }
 //----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
 
-//Kiem tra xem day mang co cam hay k?
-void PHYStatus_Check(void)
-{
-	uint8_t tmp;
-	//static bool LED_status_backup;
 
-	
-		ctlwizchip(CW_GET_PHYLINK, (void*) &tmp);
-
-		// Error indicator: LED Green ON when no PHY link detected
-		if(tmp == PHY_LINK_OFF)
-		{
-			/* Turn on LED1 */
-			//GPIO_PinWrite(GPIOC, 1, 1);
-			//delay_ms(1000);
-		}
-		else{
-		/* Turn off LED1 */
-    //GPIO_PinWrite(GPIOC, 1, 0);
-		}
-
-}
-
-void checklink(void)
-{// PHY status check counter
-			if(PHYStatus_check_enable == 1)
-			{
-				if (phystatus_check_cnt > MSEC_PHYSTATUS_CHECK)
-				{
-					PHYStatus_Check();
-					phystatus_check_cnt = 0;
-					//printf("PHYStatus_Check\r\n");
-				}
-			}
-			else
-			{
-				phystatus_check_cnt = 0;
-			}
-}
 //Trong truong hop RTC ko chay, goi ham nay de cau hinh lai RTC
 void RTC_factory_RST(void)
 	{
@@ -125,361 +106,33 @@ void RTC_Update(void)
 		ghids(DS_MONTH_REG,months);
 		ghids(DS_YEAR_REG,years);
 	}	
-void factoryRST(void)
-	{
-		
-	}
-uint8_t loadValue(void)
-{
-	__IO uint32_t MemoryProgramStatus = 0;
-	__IO uint32_t data32 = 0;
-	//uint32_t Address = 0;
-	/* Check if the programmed data is OK
-      MemoryProgramStatus = 0: data programmed correctly
-      MemoryProgramStatus != 0: number of words not programmed correctly 
-	Kiem tra DATA_32 duoc luu chua, neu luu roi nghia la bo nho ok, neu chua thi bo nho loi
-	******/
-
-  MemoryProgramStatus = 0x0;
-
-  
-    data32 = *(__IO uint32_t *)FLASH_USER_START_ADDR;
-    
-    if (data32 != DATA_32)
-    {
-      MemoryProgramStatus++;
-    }
-    
-	
-	/*Check if there is an issue to program data*/
-  if (MemoryProgramStatus == 0)
-  {
-    /* No error detected.*/
-		#ifdef DebugEnable
-		printf("Memory is ok\r\n");
-		#endif
-  }
-  else
-  {
-    /* Error detected*/
-		#ifdef DebugEnable
-		printf("Memory Error detected \r\n");
-		#endif
-		return 0;
-  }
-	//LOAD IP
-	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+4);
-	
-	
-	myipWIZNETINFO.ip[3] = (uint8_t)data32;
-	myipWIZNETINFO.ip[2] = (uint8_t)(data32>>8);
-	myipWIZNETINFO.ip[1] = (uint8_t)(data32>>16);
-	myipWIZNETINFO.ip[0] = (uint8_t)(data32>>24);	
-	#ifdef DebugEnable
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("Load IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	#endif
-	
-	
-	//LOAD SN
-	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+8);
-	
-	myipWIZNETINFO.sn[3] = (uint8_t)data32;
-	myipWIZNETINFO.sn[2] = (uint8_t)(data32>>8);
-	myipWIZNETINFO.sn[1] = (uint8_t)(data32>>16);
-	myipWIZNETINFO.sn[0] = (uint8_t)(data32>>24);	
-	#ifdef DebugEnable
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("Load SN: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	#endif
-	//LOAD GW
-	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+12);
-	
-	myipWIZNETINFO.gw[3] = (uint8_t)data32;
-	myipWIZNETINFO.gw[2] = (uint8_t)(data32>>8);
-	myipWIZNETINFO.gw[1] = (uint8_t)(data32>>16);
-	myipWIZNETINFO.gw[0] = (uint8_t)(data32>>24);	
-	#ifdef DebugEnable
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("Load GW: %d.%d.%d.%d\r\n",myipWIZNETINFO.gw[0],myipWIZNETINFO.gw[1],myipWIZNETINFO.gw[2],myipWIZNETINFO.gw[3]);
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	#endif
-	
-	//LOAD DNS
-	data32 = *(__IO uint32_t *)(FLASH_USER_START_ADDR+16);
-	
-	myipWIZNETINFO.dns[3] = (uint8_t)data32;
-	myipWIZNETINFO.dns[2] = (uint8_t)(data32>>8);
-	myipWIZNETINFO.dns[1] = (uint8_t)(data32>>16);
-	myipWIZNETINFO.dns[0] = (uint8_t)(data32>>24);	
-	#ifdef DebugEnable
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	printf("Load GW: %d.%d.%d.%d\r\n",myipWIZNETINFO.dns[0],myipWIZNETINFO.dns[1],myipWIZNETINFO.dns[2],myipWIZNETINFO.dns[3]);
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	#endif
-	
-	return 1;
-}
-void saveValue(void)
-{
-	uint32_t FirstPage = 0, NbOfPages = 0, BankNumber = 0,PageError = 0;
-	FLASH_EraseInitTypeDef EraseInitStruct;
-	uint32_t Address = 0, PAGEError = 0;
-	uint64_t temp;
-	/* Unlock the Flash to enable the flash control register access *************/
-  HAL_FLASH_Unlock();
-	/* Clear OPTVERR bit set on virgin samples */
-	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGSERR);
-  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
-	/* Get the bank */
-  BankNumber = GetBank(FLASH_USER_START_ADDR);
-	
-
-  /* Fill EraseInit structure*/
-  EraseInitStruct.TypeErase = FLASH_TYPEERASE_MASSERASE;
-  EraseInitStruct.Banks     = BankNumber;
-
-  if (HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError) != HAL_OK)
-  {
-    /*
-      Error occurred while mass erase.
-      User can add here some code to deal with this error.
-      To know the code error, user can call function 'HAL_FLASH_GetError()'
-    */
-		#ifdef DebugEnable
-		printf("Error occurred while page erase.\r\n");
-    #endif
-  }
-	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGSERR);
-  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
-	temp  = 0;
-	temp |= (myipWIZNETINFO.ip[0] <<24) |(myipWIZNETINFO.ip[1] <<16)|(myipWIZNETINFO.ip[2] <<8)|myipWIZNETINFO.ip[3];
-	#ifdef DebugEnable
-  //printf("temp : %x\r\n",(myipWIZNETINFO.ip[0] <<24) +(myipWIZNETINFO.ip[1] <<16)+(myipWIZNETINFO.ip[2] <<8)+myipWIZNETINFO.ip[3]);
-	#endif
-	//DATA32 is password for check memorry good!
-	temp = DATA_32 | (temp<<32);
-    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR, temp) == HAL_OK)
-    {
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-			#ifdef DebugEnable
-			printf("IP saved %llX!\r\n",temp);
-			#endif
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-    }
-   else
-    {
-      /* Error occurred while writing data in Flash memory.
-         User can add here some code to deal with this error */
-			#ifdef DebugEnable
-			printf("Error occurred while writing data in Flash memory\r\n");
-			#endif
-      
-    }
-		HAL_FLASH_Lock();
-}
-//Luu du lieu, phai luu 64 bit moi lan
-void storeValue(uint8_t length)
-{
-	uint32_t FirstPage = 0, NbOfPages = 0, BankNumber = 0,PageError = 0;
-	static FLASH_EraseInitTypeDef EraseInitStruct;
-	uint64_t temp,temp2=0;
-	uint32_t t;
-	/* Unlock the Flash to enable the flash control register access *************/
-  HAL_FLASH_Unlock();
-	/* Clear OPTVERR bit set on virgin samples */
-  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
-	/* Erase the user Flash area
-    (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
-  
-  /* Get the 1st page to erase */
-  FirstPage = GetPage(FLASH_USER_START_ADDR);
-
-  /* Get the number of pages to erase from 1st page */
-  NbOfPages = GetPage(FLASH_USER_END_ADDR) - FirstPage + 1;
-
-  /* Get the bank */
-  BankNumber = GetBank(FLASH_USER_START_ADDR);
-  
-  /* Fill EraseInit structure*/
-  EraseInitStruct.TypeErase   = FLASH_TYPEERASE_PAGES;
-  EraseInitStruct.Banks       = BankNumber;
-  EraseInitStruct.Page        = FirstPage;
-  EraseInitStruct.NbPages     = NbOfPages;
-	
-	
-	if (HAL_FLASHEx_Erase(&EraseInitStruct, &PageError) != HAL_OK)
-  {
-    /*
-      Error occurred while page erase.
-      User can add here some code to deal with this error.
-      PageError will contain the faulty page and then to know the code error on this page,
-      user can call function 'HAL_FLASH_GetError()'
-    */
-		#ifdef DebugEnable
-		printf("Error occurred while page erase.\r\n");
-    #endif
-  }
-	
-	/* Program the user Flash area word by word
-    (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
-	
-	//temp = DATA_32;
-	//temp = temp<<32;
-	temp  = 0;
-	temp |= (myipWIZNETINFO.ip[0] <<24) |(myipWIZNETINFO.ip[1] <<16)|(myipWIZNETINFO.ip[2] <<8)|myipWIZNETINFO.ip[3];
-	#ifdef DebugEnable
-  //printf("temp : %x\r\n",(myipWIZNETINFO.ip[0] <<24) +(myipWIZNETINFO.ip[1] <<16)+(myipWIZNETINFO.ip[2] <<8)+myipWIZNETINFO.ip[3]);
-	#endif
-	//DATA32 is password for check memorry good!
-	temp = DATA_32 | (temp<<32);
-    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR, temp) == HAL_OK)
-    {
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-			#ifdef DebugEnable
-			printf("IP saved %llX!\r\n",temp);
-			#endif
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-    }
-   else
-    {
-      /* Error occurred while writing data in Flash memory.
-         User can add here some code to deal with this error */
-			#ifdef DebugEnable
-			printf("Error occurred while writing data in Flash memory\r\n");
-			#endif
-      
-    }
-		
-		if( length > 1) //Save sn & gw
-		{
-			//temp2 = 0;
-			temp2 = (myipWIZNETINFO.gw[0] <<24) |(myipWIZNETINFO.gw[1] <<16)|(myipWIZNETINFO.gw[2] <<8)|myipWIZNETINFO.gw[3];
-			temp2 = temp2 <<32;
-			t = 0;
-			t = (myipWIZNETINFO.sn[0] <<24) |(myipWIZNETINFO.sn[1] <<16)|(myipWIZNETINFO.sn[2] <<8)|myipWIZNETINFO.sn[3];
-			temp2 = temp2|t;
-			
-			
-			if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, (FLASH_USER_START_ADDR+8), temp2) == HAL_OK)
-			{
-				#ifdef DebugEnable
-				printf("SN & GW Saved %llX\r\n",temp2);
-				#endif
-			}
-		 else
-			{
-				/* Error occurred while writing data in Flash memory.
-					 User can add here some code to deal with this error */
-				#ifdef DebugEnable
-				printf("Error occurred while writing data in Flash memory\r\n");
-				#endif
-			}
-		}
-		
-		if( length > 2) //Save dns
-		{
-			temp2 = 0;
-			temp2 = (myipWIZNETINFO.dns[0] <<24) |(myipWIZNETINFO.dns[1] <<16)|(myipWIZNETINFO.dns[2] <<8)|myipWIZNETINFO.dns[3];			
-			if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, (FLASH_USER_START_ADDR+16), temp2) == HAL_OK)
-			{
-				#ifdef DebugEnable
-				printf("DNS Saved %llX\r\n",temp2);
-				#endif
-			}
-		 else
-			{
-				/* Error occurred while writing data in Flash memory.
-					 User can add here some code to deal with this error */
-				#ifdef DebugEnable
-				printf("Error occurred while writing data in Flash memory\r\n");
-				#endif
-			}
-		}
-  
-	
-	/* Lock the Flash to disable the flash control register access (recommended
-     to protect the FLASH memory against possible unwanted operation) *********/
-  HAL_FLASH_Lock();
-}
-
-/**
-  * @brief  Gets the page of a given address
-  * @param  Addr: Address of the FLASH Memory
-  * @retval The page of a given address
-  */
-static uint32_t GetPage(uint32_t Addr)
-{
-  uint32_t page = 0;
-
-  if (Addr < (FLASH_BASE + FLASH_BANK_SIZE))
-  {
-    /* Bank 1 */
-    page = (Addr - FLASH_BASE) / FLASH_PAGE_SIZE;
-  }
-  else
-  {
-    /* Bank 2 */
-    page = (Addr - (FLASH_BASE + FLASH_BANK_SIZE)) / FLASH_PAGE_SIZE;
-  }
-
-  return page;
-}
-
-/**
-  * @brief  Gets the bank of a given address
-  * @param  Addr: Address of the FLASH Memory
-  * @retval The bank of a given address
-  */
-static uint32_t GetBank(uint32_t Addr)
-{
-  return FLASH_BANK_1;
-}
 
 
 static void  wizchip_select(void)
 {
-	//GPIO_ResetBits(W5500_CS_GPIO_PORT, W5500_CS_PIN);
 	HAL_GPIO_WritePin(SCSn_GPIO_Port, SCSn_Pin, GPIO_PIN_RESET);
 }
 static void  wizchip_deselect(void)
 {
-	//GPIO_SetBits(W5500_CS_GPIO_PORT, W5500_CS_PIN);
-	uint8_t temp=0xff;
 	HAL_GPIO_WritePin(SCSn_GPIO_Port, SCSn_Pin, GPIO_PIN_SET);
-	HAL_SPI_Transmit(&hspi1,&temp,1,100);
-	//stm32_spi_rw(0xFF);
 }
 static uint8_t wizchip_read(void)
 {
 	uint8_t temp;
-	//while (  SPI_I2S_GetFlagStatus(SPI2 , SPI_I2S_FLAG_TXE) == RESET );
-	//SPI_I2S_SendData(SPI2 , 0xff);     // Dummy write to generate clock
-	//while (  SPI_I2S_GetFlagStatus(SPI2 , SPI_I2S_FLAG_RXNE) == RESET );
-	//return (unsigned char)SPI_I2S_ReceiveData(SPI2);
-	 
 	HAL_SPI_Receive(&hspi1,&temp,1,100);
 	return temp;
 }
 static void  wizchip_write(uint8_t wb)
 {
-	//while (  SPI_I2S_GetFlagStatus(SPI2 , SPI_I2S_FLAG_TXE) == RESET );  // sending data Wait
-	//SPI_I2S_SendData(SPI2 , wb);
-	//while (  SPI_I2S_GetFlagStatus(SPI2 , SPI_I2S_FLAG_RXNE) == RESET ); // Wait for data
-	//wb = SPI_I2S_ReceiveData(SPI2);        // Dummy read to generate clock
 	HAL_SPI_Transmit(&hspi1,&wb,1,100);
 }
 static void wizchip_readburst(uint8_t* pBuf, uint16_t len)
 {
-	//stm32_wizchip_dma_transfer(1, pBuf, len);  //FALSE(0) for buff->SPI, TRUE(1) for SPI->buff
 	HAL_SPI_Receive(&hspi1,pBuf,len,100);
 }
 
 static void  wizchip_writeburst(uint8_t* pBuf, uint16_t len)
 {
-	//stm32_wizchip_dma_transfer(0, pBuf, len);  //FALSE(0) for buff->SPI, TRUE(1) for SPI->buff
 	HAL_SPI_Transmit(&hspi1,pBuf,len,100);
 }
 
@@ -558,8 +211,9 @@ void w5500_lib_init(void){
 		//Initializes to WIZCHIP with SOCKET buffer size 2 or 1 dimension array typed uint8_t
     if(ctlwizchip(CW_INIT_WIZCHIP,(void*)memsize) == -1)
     {
+			#ifdef DebugEnable
        printf("WIZCHIP Initialized fail.\r\n");
-       //while(1);
+       #endif
     }
 		
 		//printf("...get PHY Link status");
@@ -576,7 +230,9 @@ void w5500_lib_init(void){
 		temp = IK_SOCK_0;
 		if(ctlwizchip(CW_SET_INTRMASK, &temp) == -1)
 		{
+			#ifdef DebugEnable
 			printf("Cannot set imr...\r\n");
+			#endif
 		}
 		//printf("...all ok\r\n");
 		Net_Conf(myipWIZNETINFO);
@@ -611,10 +267,12 @@ void control(void)
 			myipWIZNETINFO.ip[3] = 100*(aRxBuffer[16]-'0') + 10*(aRxBuffer[17]-'0') + (aRxBuffer[18]-'0');
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 			//storeValue(3);
-			saveValue();
+
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			#ifdef DebugEnable
 			printf("New IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+			#endif
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 			
 			//NVIC_SystemReset();
@@ -643,6 +301,305 @@ void control(void)
 	}
 	
 }
+//Ham chuyen doi char sang int
+uint8_t convert_atoi( uint8_t c)
+{
+	return (uint8_t)c-48;
+}
+//Xu ly ban tin tu mach main
+void main_message_handle(void)
+{//=> Ban tin GPS: $GPS034007060819AA10	;$$GPS091259280422AA10
+	if((aRxBuffer[0] =='$')&((aRxBuffer[1] =='G')|(aRxBuffer[1] =='g'))&((aRxBuffer[2] =='P')|(aRxBuffer[2] =='p'))&((aRxBuffer[3] =='S')|(aRxBuffer[3] =='s')))
+	{
+		
+		//Ban tin dung, cap nhat du lieu
+		//If there is not GPS master message, no time on webserver
+		days 		= 10*convert_atoi(aRxBuffer[10])+convert_atoi(aRxBuffer[11]);
+		months 	= 10*convert_atoi(aRxBuffer[12])+convert_atoi(aRxBuffer[13]);
+		years 	= 10*convert_atoi(aRxBuffer[14])+convert_atoi(aRxBuffer[15]);
+		hours 	= 10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5])  ;//UTC
+		minutes = 10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
+		seconds = 10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
+		/*
+		load_line2(hours,minutes,seconds,1);
+		scan_5down();
+		*/
+		
+		/*Cap nhap thoi gian NTP*/
+		currtime.tm_year = 100+ years;//100+10*convert_atoi(aRxBuffer[14])+convert_atoi(aRxBuffer[15]);//In fact: 2000+xxx-1900
+		currtime.tm_mon  = months-1;//10*convert_atoi(aRxBuffer[12])+convert_atoi(aRxBuffer[13])-1;
+		currtime.tm_mday = days;//10*convert_atoi(aRxBuffer[10])+convert_atoi(aRxBuffer[11]);
+		
+		currtime.tm_sec  = seconds;//10*convert_atoi(aRxBuffer[8])+convert_atoi(aRxBuffer[9]);
+		currtime.tm_min  = minutes;//10*convert_atoi(aRxBuffer[6])+convert_atoi(aRxBuffer[7]);
+		currtime.tm_hour = hours;//10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5]);
+		
+		timenow = mktime(&currtime);
+		//timenow = timenow - 25200;//Tru di 7 tieng
+		
+		
+		haveSignalFromRS485 = HAVE_SIGNAL;
+		timeOutLostSignal = 10;
+	  if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
+		if(count_Stable_signal >= STABE_NUMBER) 
+			{
+				stableSignal = SIGNAL_FROM_MASTER_OK;
+			}
+		if((aRxBuffer[16]=='A') || (aRxBuffer[17]=='A') )
+						{ 
+							slave_clock.sync_status = GPS;
+						}
+		if((aRxBuffer[16]=='V') && (aRxBuffer[17]=='V') )				
+		  slave_clock.sync_status = BOTH;
+							
+		if(timeSaveRS485_to_RTC == 1)
+		{
+			//seconds++;
+			timeSaveRS485_to_RTC = 60*5;
+			//sync rs485 time to RTC 
+			ghids(14,0);//1HZ out SQW
+			ghids(DS_SECOND_REG,seconds);
+			ghids(DS_MIN_REG,minutes);
+			ghids(DS_HOUR_REG,hours);
+			//ghids(DS_DAY_REG,6);
+			ghids(DS_DATE_REG,days);
+			ghids(DS_MONTH_REG,months);
+			ghids(DS_YEAR_REG,years);
+		}
+		/*
+		load_line1(days,months,years);
+		scan_7up();
+		*/
+		#ifdef _U1_DEBUG_ENABLE_
+		printf("new timestamp:%d, %d\r\n",timenow, timeOutLostSignal);
+		timeinfo = localtime( &timenow );
+		printf("Current local time and date: %s\r\n", asctime(timeinfo));
+		#endif
+		//Update last sync NTP time server field!
+//		unixTime_last_sync = timenow + STARTOFTIME;
+//		unixTime_last_sync = htonl(unixTime_last_sync);
+//		memcpy(&serverPacket[16], &unixTime_last_sync, 4);
+		
+		//Update SNMP data table
+//		if(aRxBuffer[16]=='A') gps1_stt = 1;
+//		else gps1_stt = 0;
+//		if(aRxBuffer[17]=='A') gps2_stt = 1;
+//		else gps2_stt = 0;
+//		if(aRxBuffer[18]=='1') power1_stt = 1;
+//		else power1_stt = 0;
+//		if(aRxBuffer[19]=='1') power2_stt = 1;
+//		else power2_stt = 0;
+	}
+	else control();
+}
+void uart2_processing(void)
+{
+	if(u2Timeout == 1) 
+			{
+				u2Timeout = 0;
+				//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+				//HAL_UART_Transmit(&huart2, aRxBuffer, 20, 100);
+				main_message_handle();
+				//saved = 1;
+				//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+				//printf("aRxBuffer %s; \r\n",aRxBuffer);
+				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
+				huart2.RxXferCount = RXBUFFERSIZE;
+				memset(aRxBuffer,0,RXBUFFERSIZE);
+				//LED off
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+			}
+}
 
+void led_matrix_fucs_init(void)
+{
+	
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	#ifdef DebugEnable
+	printf("This code gen by STMcube STM32G474@128MHz\r\n");
+	#endif
+	stm32g474_FactoryLoad();
+	//stm32g474flashEraseThenSave();
+	//LEDintensity = 1;
+	up7_matrix_init();
+	line2_matrix_init();
+	
+	laythoigian();
+	#ifdef DebugEnable
+	printf("Time :%dh%dm%ds;%d %d/%d/%d; LED intensity : %d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6], LEDintensity);
+	#endif
+	
+	load_line1(days,months,years);
+	scan_7up();
+	load_line2(hours,minutes,seconds,1);
+	scan_5down();
+  
+	
+	w5500_lib_init();
+	snmp_init();
+	SNTP_init();
+	loadwebpages();
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	/** Cac che do hoat dong cua dong ho slave
+	*  Hoat dong theo RTC hoac NTP client hoac RS485
+	*  Uu tien 1: NTP client, neu khong co day mang, khong ket noi dc server thi cho tin hieu rs485, neu cung ko co tin hieu rs485 tiep tuc chay local
+	*  Chay local voi RTC cho toi khi co rs458 hoac ntp client thi chuyen du lieu, neu du lieu on dinh thi ghi du lieu sang rtc
+	*  Neu RTC ko co hoac loi??
+	*  IC RTC hong => NO RTC
+  *  IC RTC het pin => NO BATTERY 	
+	*/
+}
+void led_matrix_fucs(void)
+{
+	if(timct > 990) {
+			timct = 0;
+//			if(saved == 1) {
+//				saved = 0;
+//				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+//				stm32g474flashEraseThenSave();
+//				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+//			}
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			//printf("t: %d,%d,%d,%d \r\n" ,t1,t2,t3,t4);
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+//			HAL_Delay(50);
+//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+//			HAL_Delay(50);
+			
+			//laythoigian();
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			//printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6]);
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			
+			if(timeOutLostSignal) timeOutLostSignal--;
+			else haveSignalFromRS485 = NO_SIGNAL;
+			
+			if(haveSignalFromRS485 == NO_SIGNAL)
+			{
+			
+			}
+			//seconds++;
+			RetrySend++;
+			sycnPeriod++;
+			
+			
+			
+			//kiem tra tinh on dinh cua du lieu GPS
+				 
+			//slave_clock.sync_status = LOCAL;
+			
+			if(stableSignal == SIGNAL_FROM_MASTER_OK) count_Stable_signal--; 
+      if(count_Stable_signal == 0) 
+				{
+					stableSignal = SIGNAL_FROM_MASTER_BAD;
+					haveSignalFromRS485 = NO_SIGNAL;
+					slave_clock.sync_status = LOCAL;
+				}
+			
+			//if((timeSaveRS485_to_RTC > 1) && (stableSignal == SIGNAL_FROM_MASTER_OK)) timeSaveRS485_to_RTC --;
+				if((timeSaveRS485_to_RTC > 1)) timeSaveRS485_to_RTC --;
+			
+			if(rtc_timeout > 1) rtc_timeout --;
+			if(rtc_timeout == 1) 
+			{
+				slave_clock.rtc_status = RTC_OUT_OF_BATTERY;
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+//		printf("RTC out of battery\r\n");
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			}
+			if(rtc_timeout == 0) 
+			{
+				slave_clock.rtc_status = RTC_FINE;
+			}
+			
+		}
+	#ifdef DebugEnable
+		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	SNTP_run();
+	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+	#endif
+	
+	
+	snmpd_run2();
+	uart2_processing();
+	// web server 	
+			httpServer_run(0);
+			httpServer_run(1);
+			httpServer_run(2);
+}
 
+//khi nao buffer full thi no se goi ham nay
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+			if(UartHandle == &huart2) 
+			{
+				HAL_UART_Abort(&huart2);
+				if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+				{
+					/* Transfer error in reception process */
+					Error_Handler();
+				}
+			}
+				        
+}
 
+/**
+  * @brief EXTI line detection callbacks
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+	* Neu co GPS, se co xung PPS tai thoi diem bat dau moi giay
+  * If GPS avaiable, PPS pulse start at the start of a second
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  //Dong bo xung PPS voi mach main GPS, moi lan co xung la thoi diem bat dau cua giay
+	//sync the start of a second by pps signal
+	
+	if (GPIO_Pin == INTn_Pin)
+  {
+		//Nhan duoc ban tin NTP, xu ly thoi gian va phan hoi
+		//Receied NTP message, processing and respond
+  }
+	if (GPIO_Pin == FR_Pin)
+  {
+		//factory reset
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+//		printf("Factory reset\r\n");
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+		LEDintensity++;
+		if(LEDintensity > 15) LEDintensity =1;
+		chinhdosang();
+		//Luu bo sang moi vao bo nho!
+		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+		stm32g474flashEraseThenSave();
+		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+  }
+	if (GPIO_Pin == SQW_Pin)
+  {
+		//t4 = fractionOfSecond;
+		//Dong bo lai phan le cua giay
+		fractionOfSecond = 0;
+		//RTC second
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+//		printf("RTC\r\n");
+//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+		//RTC hoat dong binh thuong
+		rtc_timeout = 0;
+		
+				if(haveSignalFromRS485 == NO_SIGNAL)
+			{
+				seconds++;
+				if(seconds > 59) 
+				{
+									//Moi phut se dong bo thoi gian voi RTC mot lan
+									laythoigian();
+				}
+			}
+			load_line1(days,months,years);
+			scan_7up();
+			load_line2(hours,minutes,seconds,1);
+			scan_5down();
+  }
+
+}
