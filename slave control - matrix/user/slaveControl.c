@@ -7,9 +7,11 @@
 #include "httpServer.h"
 
 slave_status slave_clock;
-#define fractionOfSecond TIM4->CNT
+#define fractionOfSecond TIM1->CNT
 uint8_t u2Timeout = 0;
-
+extern volatile uint8_t waitForSetTime;	
+extern volatile uint32_t tim4ct;
+extern uint8_t ntpTimeServer_ip[4];
 
 static uint8_t unlock_config =0;
 #define MSEC_PHYSTATUS_CHECK 		1000		// msec
@@ -95,6 +97,7 @@ void RTC_factory_RST(void)
 		ghids(DS_MONTH_REG,5);
 		ghids(DS_YEAR_REG,22);
 	}
+	
 void RTC_Update(void)
 	{
 		ghids(14,0);//1HZ out SQW
@@ -105,6 +108,7 @@ void RTC_Update(void)
 		ghids(DS_DATE_REG,days);
 		ghids(DS_MONTH_REG,months);
 		ghids(DS_YEAR_REG,years);
+		//printf("Time set!!!!\r\n");
 	}	
 
 
@@ -153,7 +157,7 @@ void Display_Net_Conf()
 	printf("GW: %d.%d.%d.%d\r\n", tempWIZNETINFO.gw[0], tempWIZNETINFO.gw[1], tempWIZNETINFO.gw[2], tempWIZNETINFO.gw[3]);
 	printf("SN: %d.%d.%d.%d\r\n", tempWIZNETINFO.sn[0], tempWIZNETINFO.sn[1], tempWIZNETINFO.sn[2], tempWIZNETINFO.sn[3]);
 	printf("DNS: %d.%d.%d.%d\r\n", tempWIZNETINFO.dns[0], tempWIZNETINFO.dns[1], tempWIZNETINFO.dns[2], tempWIZNETINFO.dns[3]);
-	
+	printf("NTP time server IP: %d.%d.%d.%d\r\n", ntpTimeServer_ip[0], ntpTimeServer_ip[1], ntpTimeServer_ip[2], ntpTimeServer_ip[3]);
 	//printf("\r\n=== DNS Client Example ===============\r\n");
   //printf("> DNS 1st : %d.%d.%d.%d\r\n", tempWIZNETINFO.dns[0], tempWIZNETINFO.dns[1], tempWIZNETINFO.dns[2], tempWIZNETINFO.dns[3]);
   //printf("> DNS 2nd : %d.%d.%d.%d\r\n", DNS_2nd[0], DNS_2nd[1], DNS_2nd[2], DNS_2nd[3]);
@@ -163,15 +167,7 @@ void Display_Net_Conf()
 
 void Net_Conf(wiz_NetInfo temp_netinfo)
 {
-	/*
-	wiz_NetInfo gWIZNETINFO = {
-		{ 0x00, 0x08, 0xDC, 0x44, 0x55, 0x66 },				// Mac address
-		{ 192, 168, 1, 91 },								// IP address
-		{ 255, 255, 255, 0},								// Subnet mask
-		{ 192, 168, 1, 1},									// Gateway
-		{ 8, 8, 8, 8},										// DNS Server
-	};
-	*/
+
 	ctlnetwork(CN_SET_NETINFO, (void*) &temp_netinfo);
 	#ifdef DebugEnable
 	Display_Net_Conf();
@@ -423,6 +419,16 @@ void led_matrix_fucs_init(void)
 	//LEDintensity = 1;
 	up7_matrix_init();
 	line2_matrix_init();
+	load_line1(88,88,88);
+	scan_7up();
+	load_line2(88,88,88,1);
+	scan_5down();
+	HAL_Delay(500);
+	
+	w5500_lib_init();
+	snmp_init();
+	SNTP_init();
+	loadwebpages();
 	
 	laythoigian();
 	#ifdef DebugEnable
@@ -433,12 +439,6 @@ void led_matrix_fucs_init(void)
 	scan_7up();
 	load_line2(hours,minutes,seconds,1);
 	scan_5down();
-  
-	
-	w5500_lib_init();
-	snmp_init();
-	SNTP_init();
-	loadwebpages();
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	/** Cac che do hoat dong cua dong ho slave
 	*  Hoat dong theo RTC hoac NTP client hoac RS485
@@ -453,24 +453,11 @@ void led_matrix_fucs(void)
 {
 	if(timct > 990) {
 			timct = 0;
-//			if(saved == 1) {
-//				saved = 0;
-//				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-//				stm32g474flashEraseThenSave();
-//				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-//			}
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-			//printf("t: %d,%d,%d,%d \r\n" ,t1,t2,t3,t4);
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-//			HAL_Delay(50);
-//			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-//			HAL_Delay(50);
+
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 			
-			//laythoigian();
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-			//printf("Time :%dh%dm%ds;%d %d/%d/%d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6]);
-			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+
 			
 			if(timeOutLostSignal) timeOutLostSignal--;
 			else haveSignalFromRS485 = NO_SIGNAL;
@@ -514,9 +501,22 @@ void led_matrix_fucs(void)
 			}
 			
 		}
+	if((waitForSetTime == 1) && (TIM1->CNT > 9980)) 
+		{
+			waitForSetTime = 0;
+			seconds++;
+			RTC_Update();
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			printf("Time set IT\r\n");
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			load_line1(days,months,years);
+			scan_7up();
+			load_line2(hours,minutes,seconds,1);
+			scan_5down();
+		}
 	#ifdef DebugEnable
 		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	SNTP_run();
+	SNTP_run2();
 	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	#endif
 	
@@ -577,29 +577,28 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 	if (GPIO_Pin == SQW_Pin)
   {
-		//t4 = fractionOfSecond;
+		if(waitForSetTime == 0) fractionOfSecond = 0;
 		//Dong bo lai phan le cua giay
-		fractionOfSecond = 0;
 		//RTC second
-//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-//		printf("RTC\r\n");
-//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 		//RTC hoat dong binh thuong
 		rtc_timeout = 0;
-		
-				if(haveSignalFromRS485 == NO_SIGNAL)
-			{
-				seconds++;
-				if(seconds > 59) 
-				{
-									//Moi phut se dong bo thoi gian voi RTC mot lan
-									laythoigian();
-				}
-			}
-			load_line1(days,months,years);
-			scan_7up();
-			load_line2(hours,minutes,seconds,1);
-			scan_5down();
+  	update_display();
+		//t1 = fractionOfSecond;
+		timenow++;
   }
 
+}
+
+void update_display(void)
+{
+	seconds++;
+	if(seconds > 59) 
+		{
+			//Moi phut se dong bo thoi gian voi RTC mot lan
+			laythoigian();
+		}	
+	load_line1(days,months,years);
+	scan_7up();
+	load_line2(hours,minutes,seconds,1);
+	scan_5down();
 }

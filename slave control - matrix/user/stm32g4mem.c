@@ -5,7 +5,7 @@
 #include "wizchip_conf.h"
 
 extern wiz_NetInfo myipWIZNETINFO;
-													 
+extern uint8_t ntpTimeServer_ip[4];													 
  														 
 
 
@@ -24,6 +24,7 @@ static uint32_t GetPage(uint32_t Addr)
 {
   return (Addr - FLASH_BASE) / FLASH_PAGE_SIZE;;
 }
+
 void stm32g474flashErase(void)
 {
 	/* Unlock the Flash to enable the flash control register access *************/
@@ -170,6 +171,22 @@ void stm32g474flashEraseThenSave(void)
 			printf("Cant save password\r\n");
 			#endif
     }
+		
+		temp = 0;
+		temp = (ntpTimeServer_ip[3] <<24) |(ntpTimeServer_ip[2] <<16)|(ntpTimeServer_ip[1] <<8)|ntpTimeServer_ip[0];
+		
+		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR+24, temp) == HAL_OK)
+    {
+			#ifdef DebugEnable
+			printf("Saved NTP server IP\r\n");
+			#endif
+    }
+		else 
+    {
+			#ifdef DebugEnable
+			printf("Cant save NTP server IP\r\n");
+			#endif
+    }
   
   HAL_FLASH_Lock();
 }
@@ -202,6 +219,12 @@ void stm32g474_FactoryLoad(void)
 		myipWIZNETINFO.dns[1] = myMem->dns[1];
 		myipWIZNETINFO.dns[2] = myMem->dns[2];
 		myipWIZNETINFO.dns[3] = myMem->dns[3];
+		
+		ntpTimeServer_ip[0] = myMem->ntp_ip[0];
+		ntpTimeServer_ip[1] = myMem->ntp_ip[1];
+		ntpTimeServer_ip[2] = myMem->ntp_ip[2];
+		ntpTimeServer_ip[3] = myMem->ntp_ip[3];
+		//printf("NTP time server: %d.%d.%d.%d\r\n", ntpTimeServer_ip[0], ntpTimeServer_ip[1], ntpTimeServer_ip[2], ntpTimeServer_ip[3]);
 		return;
 	}
 	#ifdef DebugEnable

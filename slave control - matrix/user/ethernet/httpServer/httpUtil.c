@@ -18,6 +18,7 @@
 //wiz_NetInfo getWIZNETINFO;
 //Dung luon bien nay luu cho tiet kiem bo nho!!!
 extern wiz_NetInfo myipWIZNETINFO;
+extern uint8_t ntpTimeServer_ip[4]; 
 #define LOST_GPS_MASTER 1
 
 
@@ -54,6 +55,7 @@ void make_json_netinfo2(uint8_t * buf, uint16_t * len)
 											\"gw\":\"%d.%d.%d.%d\",\
 											\"sn\":\"%d.%d.%d.%d\",\
 											\"dns\":\"%d.%d.%d.%d\",\
+											\"ntp\":\"%d.%d.%d.%d\",\
 											\"dhcp\":\"%d\"\
 											});",
 											netinfo.mac[0], netinfo.mac[1], netinfo.mac[2], netinfo.mac[3], netinfo.mac[4], netinfo.mac[5],
@@ -61,6 +63,7 @@ void make_json_netinfo2(uint8_t * buf, uint16_t * len)
 											netinfo.gw[0], netinfo.gw[1], netinfo.gw[2], netinfo.gw[3],
 											netinfo.sn[0], netinfo.sn[1], netinfo.sn[2], netinfo.sn[3],
 											netinfo.dns[0], netinfo.dns[1], netinfo.dns[2], netinfo.dns[3],
+										  ntpTimeServer_ip[0],ntpTimeServer_ip[1],ntpTimeServer_ip[2],ntpTimeServer_ip[3],
 											netinfo.dhcp
 											);
 }
@@ -142,7 +145,6 @@ uint8_t * set_basic_config_setting(uint8_t * uri)
 	uint8_t * param;
 
 	uint8_t * ip = myipWIZNETINFO.ip;
-  
 	//boc tach IP
 		if((param = get_http_param_value((char *)uri, "ip")))
 		{
@@ -162,7 +164,12 @@ uint8_t * set_basic_config_setting(uint8_t * uri)
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.sn);
 			printf("Subnet: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
 		}
-		
+		//boc tach NTP server IP
+		if((param = get_http_param_value((char *)uri, "ntpip")))
+		{
+			inet_addr_((uint8_t*)param, ntpTimeServer_ip);
+			printf("NTP server IP: %d.%d.%d.%d\r\n",ntpTimeServer_ip[0],ntpTimeServer_ip[1],ntpTimeServer_ip[2],ntpTimeServer_ip[3]);
+		}
 	return ip;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

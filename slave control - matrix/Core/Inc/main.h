@@ -50,6 +50,7 @@ typedef struct {
 	uint8_t dns[4];
 	uint32_t keyword;
 	uint32_t LED_intensity;
+	uint8_t ntp_ip[4];
 } dataSave;		
 #define myMem ((dataSave *) FLASH_USER_START_ADDR)
 
@@ -61,27 +62,6 @@ typedef struct {
 #define scanLimit   0x0B
 #define shut_down   0x0C
 #define disTest     0x0F
-/* USER CODE END Includes */
-
-/* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
-
-/* USER CODE END ET */
-
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
-
-/* USER CODE END EC */
-
-/* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
-
-/* USER CODE END EM */
-
-/* Exported functions prototypes ---------------------------------------------*/
-void Error_Handler(void);
-
-/* USER CODE BEGIN EFP */
 
 #define SIGNAL_FROM_MASTER_OK   1
 #define SIGNAL_FROM_MASTER_BAD  0
@@ -137,10 +117,13 @@ void scan_5down(void);
 void load_line2(uint8_t dis_hour,uint8_t dis_min,uint8_t dis_sec,uint8_t dot);
 void line2_matrix_init (void);
 void chinhdosang(void);
+void update_display(void);
+	
 void led_matrix_fucs_init(void);
 void led_matrix_fucs(void);
 void SNTP_init(void);		
 int8_t SNTP_run(void);	
+int8_t SNTP_run2(void);
 
 void RTC_Update(void);
 //define for DS3231
@@ -155,6 +138,28 @@ void RTC_Update(void);
 
 void laythoigian(void);
 void ghids(unsigned char add, unsigned char dat);
+/* USER CODE END Includes */
+
+/* Exported types ------------------------------------------------------------*/
+/* USER CODE BEGIN ET */
+
+/* USER CODE END ET */
+
+/* Exported constants --------------------------------------------------------*/
+/* USER CODE BEGIN EC */
+
+/* USER CODE END EC */
+
+/* Exported macro ------------------------------------------------------------*/
+/* USER CODE BEGIN EM */
+
+/* USER CODE END EM */
+
+/* Exported functions prototypes ---------------------------------------------*/
+void Error_Handler(void);
+
+/* USER CODE BEGIN EFP */
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

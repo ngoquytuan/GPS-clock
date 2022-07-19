@@ -16,7 +16,7 @@
 uint32_t countOfNTPrequest = 0;
 extern time_t timenow;
 //for NTP server
-time_t unixTime_last_sync;// = 1650858760;// lan chuan gio gan nhat 1650858760
+time_t unixTime_last_sync;
 /* SNTP Packet array */
 uint8_t serverPacket[NTP_PACKET_SIZE] = {0};
 uint8_t clientPacket[NTP_PACKET_RAWSIZE] = {0};
@@ -122,7 +122,6 @@ void ntpserverdefaultconfig(void)
 		unixTime_last_sync = htonl(unixTime_last_sync);// gio luc truyen
 		memcpy(&serverPacket[16], &unixTime_last_sync, 4);
 	
-		unixTime_last_sync = timenow;
 }
 
 int32_t NTPUDP(void)
@@ -147,7 +146,7 @@ int32_t NTPUDP(void)
                printf("%d: recvfrom error. %d\r\n",SOCK_UDPS,ret);
                return ret;
             }
-					countOfNTPrequest++;
+					
 					//printf("NTP received!\r\n");
 					//unixTime_last_sync = (timenow + STARTOFTIME);
 					//unixTime_last_sync = htonl(unixTime_last_sync);
@@ -199,6 +198,7 @@ int32_t NTPUDP(void)
                sentsize += ret; // Don't care SOCKERR_BUSY, because it is zero.
             }
 						wzn_event_handle();
+						countOfNTPrequest++;
 						//printf("\r\nNTPsent \r\n");
          }
          break;

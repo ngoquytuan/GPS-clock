@@ -40,9 +40,6 @@ extern int8_t lostSignal;
 // Pre-defined Get CGI functions
 
 void make_json_netinfo(uint8_t * buf, uint16_t * len);
-
-
-
 void make_json_netinfo2(uint8_t * buf, uint16_t * len)
 {
 	wiz_NetInfo netinfo;

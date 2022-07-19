@@ -87,7 +87,7 @@ void loadwebpages(void)
 		httpServer_init(TX_BUF, RX_BUF, MAX_HTTPSOCK, socknumlist);
 	
 		reg_httpServer_webContent((uint8_t *)"index.html", (uint8_t *)index_page);				// index.html 		: Main page example
-		reg_httpServer_webContent((uint8_t *)"netinfo.html", (uint8_t *)netinfo_page);			// netinfo.html 	: Network information example page
+		reg_httpServer_webContent((uint8_t *)"netinfo.html", (uint8_t *)netinfo_page_slave);			// netinfo.html 	: Network information example page
 		reg_httpServer_webContent((uint8_t *)"netinfo.js", (uint8_t *)wiz550web_netinfo_js);	// netinfo.js 		: JavaScript for Read Network configuration 	(+ ajax.js)
 		//reg_httpServer_webContent((uint8_t *)"img.html", (uint8_t *)img_page);					// img.html 		: Base64 Image data example page
 
@@ -109,9 +109,9 @@ void loadwebpages(void)
 		//favicon.ico
 		//reg_httpServer_webContent((uint8_t *)"favicon.ico", (uint8_t *)pageico);			// favicon.ico
 		//config page
-		reg_httpServer_webContent((uint8_t *)"config.html", (uint8_t *)configpage);			// config.html
+		reg_httpServer_webContent((uint8_t *)"config.html", (uint8_t *)configpageforslave);			// config.html
 		reg_httpServer_webContent((uint8_t *)"fullconfig.html", (uint8_t *)fullconfigpage);			// fullconfig.html
-		display_reg_webContent_list();
+		//display_reg_webContent_list();
 }
 void httpServer_Sockinit(uint8_t cnt, uint8_t * socklist)
 {
