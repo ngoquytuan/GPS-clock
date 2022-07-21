@@ -6,27 +6,33 @@
 #include "snmp.h"
 #include "httpServer.h"
 
-slave_status slave_clock;
-#define fractionOfSecond TIM1->CNT
-uint8_t u2Timeout = 0;
 extern volatile uint8_t waitForSetTime;	
 extern volatile uint32_t tim4ct;
 extern uint8_t ntpTimeServer_ip[4];
-
-static uint8_t unlock_config =0;
-#define MSEC_PHYSTATUS_CHECK 		1000		// msec
-#define PHYStatus_check_enable 1
-
 //NTP client
 extern uint16_t RetrySend ; //60 giay
 extern uint16_t sycnPeriod ;// 1 gio
-
 extern time_t timenow;
 extern wiz_NetInfo myipWIZNETINFO;
 extern volatile uint16_t phystatus_check_cnt;
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c3;
 extern struct tm currtime;
+
+slave_status slave_clock;
+char ds3231_reg[7];
+#define fractionOfSecond TIM1->CNT
+uint8_t u2Timeout = 0;
+
+uint8_t phylink = PHY_LINK_OFF;
+#define MSEC_PHYSTATUS_CHECK 		1000		// msec
+uint16_t t_check_link_ms = 0;
+
+static uint8_t unlock_config =0;
+#define MSEC_PHYSTATUS_CHECK 		1000		// msec
+#define PHYStatus_check_enable 1
+
+
 uint8_t rtc_timeout = 30;
 int8_t haveSignalFromRS485 = NO_SIGNAL;
 int8_t stableSignal = SIGNAL_FROM_MASTER_BAD;
@@ -36,109 +42,22 @@ int8_t timeOutLostSignal = 0;
 int16_t timeSaveRS485_to_RTC = 60;
 uint32_t countOfMasterMessages = 0;	
 uint32_t countOfNTPrequest = 0;	
-//----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
-//Phai pull up SDA SCL
-unsigned char i2c_write[1];
-char ds3231_reg[7],giaycu,ngay_al,thang_al,nhietdo,nhietdole;
-unsigned char i2c_rv[19];
-void BCD_Decoder()
-{
-	//printf("i2c_rv[3]: %d",i2c_rv[3]);
-	for(char x=0;x<7;x++) ds3231_reg[x]=(i2c_rv[x] & 0x0f) + (i2c_rv[x]>>4)*10;
-	//ds3231_reg[3] --; 
-}
-unsigned char BCD_Encoder(unsigned char temp)
-{
-	return ((temp/10)<<4)|(temp%10);
-}
-void laythoigian(void)
-{
-	//HAL_I2C_Mem_Read(&hi2c3,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,i2c_rv,19,1000); //read time
-	if( HAL_I2C_Mem_Read(&hi2c3,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,i2c_rv,19,1000) == HAL_ERROR) 
-		{
-			slave_clock.rtc_status = NO_RTC;
-			//printf("NO RTC");
-			return;
-		}
-	
-	BCD_Decoder(); //chuyen doi
-	
-//	nhietdo = i2c_rv[14];
-//	nhietdole = i2c_rv[18]>>6;
-//	if(nhietdole == 1) nhietdole = 25;
-//	else if(nhietdole == 2) nhietdole = 5;
-//	else if(nhietdole == 3) nhietdole = 75;
-//	else nhietdole = 0;
-	
-	hours   = ds3231_reg[2];
-	minutes = ds3231_reg[1];
-	seconds = ds3231_reg[0];
-	days		= ds3231_reg[4];
-	months  = ds3231_reg[5]; 
-	years   = ds3231_reg[6];
-}
-void ghids(unsigned char add, unsigned char dat)
-{
-	i2c_write[0] = BCD_Encoder(dat);
-	HAL_I2C_Mem_Write(&hi2c3,0x68<<1,add,I2C_MEMADD_SIZE_8BIT,i2c_write,1,1000); 
-}
-//----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
+
+/* Khai bao cac chuong trinh con!!
+*/
+static void  wizchip_select(void);
+static void  wizchip_deselect(void);
+static uint8_t wizchip_read(void);
+static void  wizchip_write(uint8_t wb);
+static void wizchip_readburst(uint8_t* pBuf, uint16_t len);
+static void  wizchip_writeburst(uint8_t* pBuf, uint16_t len);
 
 
-//Trong truong hop RTC ko chay, goi ham nay de cau hinh lai RTC
-void RTC_factory_RST(void)
-	{
-		ghids(14,0);//1HZ out SQW
-		ghids(DS_SECOND_REG,0);
-		ghids(DS_MIN_REG,26);
-		ghids(DS_HOUR_REG,15);
-		ghids(DS_DAY_REG,2);
-		ghids(DS_DATE_REG,23);
-		ghids(DS_MONTH_REG,5);
-		ghids(DS_YEAR_REG,22);
-	}
-	
-void RTC_Update(void)
-	{
-		ghids(14,0);//1HZ out SQW
-		ghids(DS_SECOND_REG,seconds);
-		ghids(DS_MIN_REG,minutes);
-		ghids(DS_HOUR_REG,hours);
-		//ghids(DS_DAY_REG,2);
-		ghids(DS_DATE_REG,days);
-		ghids(DS_MONTH_REG,months);
-		ghids(DS_YEAR_REG,years);
-		//printf("Time set!!!!\r\n");
-	}	
 
 
-static void  wizchip_select(void)
-{
-	HAL_GPIO_WritePin(SCSn_GPIO_Port, SCSn_Pin, GPIO_PIN_RESET);
-}
-static void  wizchip_deselect(void)
-{
-	HAL_GPIO_WritePin(SCSn_GPIO_Port, SCSn_Pin, GPIO_PIN_SET);
-}
-static uint8_t wizchip_read(void)
-{
-	uint8_t temp;
-	HAL_SPI_Receive(&hspi1,&temp,1,100);
-	return temp;
-}
-static void  wizchip_write(uint8_t wb)
-{
-	HAL_SPI_Transmit(&hspi1,&wb,1,100);
-}
-static void wizchip_readburst(uint8_t* pBuf, uint16_t len)
-{
-	HAL_SPI_Receive(&hspi1,pBuf,len,100);
-}
-
-static void  wizchip_writeburst(uint8_t* pBuf, uint16_t len)
-{
-	HAL_SPI_Transmit(&hspi1,pBuf,len,100);
-}
+/*
+W5500	
+*/
 
 void Display_Net_Conf()
 {
@@ -158,11 +77,7 @@ void Display_Net_Conf()
 	printf("SN: %d.%d.%d.%d\r\n", tempWIZNETINFO.sn[0], tempWIZNETINFO.sn[1], tempWIZNETINFO.sn[2], tempWIZNETINFO.sn[3]);
 	printf("DNS: %d.%d.%d.%d\r\n", tempWIZNETINFO.dns[0], tempWIZNETINFO.dns[1], tempWIZNETINFO.dns[2], tempWIZNETINFO.dns[3]);
 	printf("NTP time server IP: %d.%d.%d.%d\r\n", ntpTimeServer_ip[0], ntpTimeServer_ip[1], ntpTimeServer_ip[2], ntpTimeServer_ip[3]);
-	//printf("\r\n=== DNS Client Example ===============\r\n");
-  //printf("> DNS 1st : %d.%d.%d.%d\r\n", tempWIZNETINFO.dns[0], tempWIZNETINFO.dns[1], tempWIZNETINFO.dns[2], tempWIZNETINFO.dns[3]);
-  //printf("> DNS 2nd : %d.%d.%d.%d\r\n", DNS_2nd[0], DNS_2nd[1], DNS_2nd[2], DNS_2nd[3]);
-  //printf("======================================\r\n");
-   //printf("> Example Domain Name : %s\r\n", Domain_name);
+	
 }
 
 void Net_Conf(wiz_NetInfo temp_netinfo)
@@ -173,13 +88,16 @@ void Net_Conf(wiz_NetInfo temp_netinfo)
 	Display_Net_Conf();
 	#endif
 }
+/*
+Khoi dong card mang!
+*/
 void w5500_lib_init(void){
 		
 		uint8_t tmp;
 		intr_kind temp;
 		uint8_t memsize[2][8] = {{2,2,2,2,2,2,2,2},{2,2,2,2,2,2,2,2}};	
 		
-		//printf("w5500_lib_init...1");
+
 		//GPIO_ResetBits(W5500_RST_GPIO, W5500_RST);
 		HAL_GPIO_WritePin(RSTn_GPIO_Port, RSTn_Pin, GPIO_PIN_RESET);
 		HAL_Delay(100);
@@ -207,33 +125,52 @@ void w5500_lib_init(void){
 		//Initializes to WIZCHIP with SOCKET buffer size 2 or 1 dimension array typed uint8_t
     if(ctlwizchip(CW_INIT_WIZCHIP,(void*)memsize) == -1)
     {
-			#ifdef DebugEnable
-       printf("WIZCHIP Initialized fail.\r\n");
-       #endif
+       //printf("WIZCHIP Initialized fail.\r\n");
     }
-		
-		//printf("...get PHY Link status");
-		/* PHY link status check */
-    
-//		do
-//    {
-//       if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
-//          ;//printf("Unknown PHY Link stauts.\r\n");
-//    }while(tmp == PHY_LINK_OFF);
 
 		
 		//Cau hinh ngat tren Socket 0, vi can biet thoi diem ban tin NTP den!!
 		temp = IK_SOCK_0;
 		if(ctlwizchip(CW_SET_INTRMASK, &temp) == -1)
 		{
-			#ifdef DebugEnable
-			printf("Cannot set imr...\r\n");
-			#endif
+			//printf("Cannot set imr...\r\n");
 		}
-		//printf("...all ok\r\n");
 		Net_Conf(myipWIZNETINFO);
 	
 }
+/*
+	Kiem tra W5500, SPI co on ko, day mang co cam ko?
+*/
+uint8_t checkDaymang(void)
+{
+	uint8_t tmp;
+  //phylink = PHY_LINK_OFF;
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	if(ctlwizchip(CW_GET_PHYLINK, (void*)&tmp) == -1)
+	{
+		#ifdef DebugEnable
+		//printf("Unknown PHY Link stauts.\r\n");//Loi spi???
+		#endif
+		phylink = PHY_LINK_OFF;
+		return 0;
+	}
+	
+	if(tmp == PHY_LINK_OFF) 
+		{
+			phylink = PHY_LINK_OFF;
+			return 0;//Ko cam day mang
+		}
+	
+//	#ifdef DebugEnable
+	//printf("Co cam day mang nhe\r\n");
+//	#endif
+	phylink = PHY_LINK_ON;
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+  return 1;  
+}
+/*
+Control
+*/
 void control(void)
 {
 	uint8_t tmp[4];
@@ -495,8 +432,17 @@ void slaveClockFucnsInit(void)
   *  IC RTC het pin => NO BATTERY 	
 	*/
 }
+/*
+	Main programs
+*/
 void slaveClockRun(void)
 {
+	if(t_check_link_ms > MSEC_PHYSTATUS_CHECK)
+		{
+			t_check_link_ms = 0;
+			checkDaymang();
+		}
+		
 	if(timct > 990) {
 			timct = 0;
 
@@ -537,9 +483,6 @@ void slaveClockRun(void)
 			if(rtc_timeout == 1) 
 			{
 				slave_clock.rtc_status = RTC_OUT_OF_BATTERY;
-//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-//		printf("RTC out of battery\r\n");
-//		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 			}
 			if(rtc_timeout == 0) 
 			{
@@ -571,7 +514,8 @@ void slaveClockRun(void)
 			console_blink();
 #endif
 			}
-	
+			if(phylink != PHY_LINK_ON) return;// ko cam day mang thi ko lam gi het!!!
+			
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 			SNTP_run2();
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
@@ -665,3 +609,103 @@ void update_display(void)
 			console_blink();
 #endif
 }
+/*
+Cac chuong trinh con!!!!
+*/
+//----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
+//Phai pull up SDA SCL
+
+
+//void BCD_Decoder()
+//{
+//	//printf("i2c_rv[3]: %d",i2c_rv[3]);
+//	for(char x=0;x<7;x++) ds3231_reg[x]=(i2c_rv[x] & 0x0f) + (i2c_rv[x]>>4)*10;
+//	//ds3231_reg[3] --; 
+//}
+unsigned char BCD_Encoder(unsigned char temp)
+{
+	return ((temp/10)<<4)|(temp%10);
+}
+void laythoigian(void)
+{
+	unsigned char i2c_rv[19];
+	if( HAL_I2C_Mem_Read(&hi2c3,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,i2c_rv,19,1000) == HAL_ERROR) 
+		{
+			slave_clock.rtc_status = NO_RTC;
+			//printf("NO RTC");
+			return;
+		}
+	
+	//BCD_Decoder(); //chuyen doi
+	for(char x=0;x<7;x++) ds3231_reg[x]=(i2c_rv[x] & 0x0f) + (i2c_rv[x]>>4)*10;
+	
+	hours   = ds3231_reg[2];
+	minutes = ds3231_reg[1];
+	seconds = ds3231_reg[0];
+	days		= ds3231_reg[4];
+	months  = ds3231_reg[5]; 
+	years   = ds3231_reg[6];
+}
+void ghids(unsigned char add, unsigned char dat)
+{
+	unsigned char i2c_write[1];
+	i2c_write[0] = BCD_Encoder(dat);
+	HAL_I2C_Mem_Write(&hi2c3,0x68<<1,add,I2C_MEMADD_SIZE_8BIT,i2c_write,1,1000); 
+}
+//----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
+
+
+//Trong truong hop RTC ko chay, goi ham nay de cau hinh lai RTC
+void RTC_factory_RST(void)
+	{
+		ghids(14,0);//1HZ out SQW
+		ghids(DS_SECOND_REG,0);
+		ghids(DS_MIN_REG,26);
+		ghids(DS_HOUR_REG,15);
+		ghids(DS_DAY_REG,2);
+		ghids(DS_DATE_REG,23);
+		ghids(DS_MONTH_REG,5);
+		ghids(DS_YEAR_REG,22);
+	}
+	
+void RTC_Update(void)
+	{
+		ghids(14,0);//1HZ out SQW
+		ghids(DS_SECOND_REG,seconds);
+		ghids(DS_MIN_REG,minutes);
+		ghids(DS_HOUR_REG,hours);
+		//ghids(DS_DAY_REG,2);
+		ghids(DS_DATE_REG,days);
+		ghids(DS_MONTH_REG,months);
+		ghids(DS_YEAR_REG,years);
+		//printf("Time set!!!!\r\n");
+	}	
+
+static void  wizchip_select(void)
+{
+	HAL_GPIO_WritePin(SCSn_GPIO_Port, SCSn_Pin, GPIO_PIN_RESET);
+}
+static void  wizchip_deselect(void)
+{
+	HAL_GPIO_WritePin(SCSn_GPIO_Port, SCSn_Pin, GPIO_PIN_SET);
+}
+static uint8_t wizchip_read(void)
+{
+	uint8_t temp;
+	HAL_SPI_Receive(&hspi1,&temp,1,100);
+	return temp;
+}
+static void  wizchip_write(uint8_t wb)
+{
+	HAL_SPI_Transmit(&hspi1,&wb,1,100);
+}
+static void wizchip_readburst(uint8_t* pBuf, uint16_t len)
+{
+	HAL_SPI_Receive(&hspi1,pBuf,len,100);
+}
+
+static void  wizchip_writeburst(uint8_t* pBuf, uint16_t len)
+{
+	HAL_SPI_Transmit(&hspi1,pBuf,len,100);
+}
+
