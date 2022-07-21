@@ -159,7 +159,8 @@ int main(void)
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
 	built_time = timenow;
-	led_matrix_fucs_init();
+	
+	slaveClockFucnsInit();
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_Base_Start_IT(&htim4);
@@ -178,8 +179,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-		led_matrix_fucs();
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+		slaveClockRun();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

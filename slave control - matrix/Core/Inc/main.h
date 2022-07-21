@@ -143,8 +143,8 @@ void day_display(void);
 void chinhdosang(void);
 void update_display(void);
 	
-void led_matrix_fucs_init(void);
-void led_matrix_fucs(void);
+void slaveClockFucnsInit(void);
+void slaveClockRun(void);
 void SNTP_init(void);		
 int8_t SNTP_run(void);	
 int8_t SNTP_run2(void);

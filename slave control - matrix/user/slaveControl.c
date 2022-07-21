@@ -406,14 +406,46 @@ void uart2_processing(void)
         HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 			}
 }
+/*
+Tra ve trang thai xuat xuong
+Factory reset
+Hold FR button and turn Clock on => factory reset!!!
+*/
+void slaveClockFactoryLoad(void)
+{
+	uint32_t count=0;
+	//Kiem tra xem nut reset factory seting co dc bam hay ko???
+	if(HAL_GPIO_ReadPin(FR_GPIO_Port,FR_Pin) == GPIO_PIN_RESET)
+	{
+		while(HAL_GPIO_ReadPin(FR_GPIO_Port,FR_Pin) == GPIO_PIN_RESET)
+		{
+			count++;
+			HAL_Delay(1);
+			if(count > 2000)
+			{
+				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+				HAL_UART_Transmit(&huart2, (uint8_t *)"Factory reset!!!\r\n", 18, 100);
+				HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+				stm32g474flashEraseThenSave();
+				HAL_Delay(1000);
+				//Restart MCU
+				NVIC_SystemReset();
+			}
+		}
+	}
+}
 
-void led_matrix_fucs_init(void)
+/*
+Pre load programs
+*/
+void slaveClockFucnsInit(void)
 {
 	
 	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 	#ifdef DebugEnable
 	printf("This code gen by STMcube STM32G474@128MHz\r\n");
 	#endif
+	slaveClockFactoryLoad();
 	stm32g474_FactoryLoad();
 	//stm32g474flashEraseThenSave();
 	//LEDintensity = 1;
@@ -463,7 +495,7 @@ void led_matrix_fucs_init(void)
   *  IC RTC het pin => NO BATTERY 	
 	*/
 }
-void led_matrix_fucs(void)
+void slaveClockRun(void)
 {
 	if(timct > 990) {
 			timct = 0;
