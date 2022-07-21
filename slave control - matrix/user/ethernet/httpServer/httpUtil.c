@@ -37,6 +37,7 @@ extern uint8_t hours;
 extern uint8_t minutes;
 extern uint8_t seconds;
 extern uint16_t saved;
+extern uint8_t LEDintensity;
  int8_t lostSignal;
 // Pre-defined Get CGI functions
 
@@ -150,25 +151,32 @@ uint8_t * set_basic_config_setting(uint8_t * uri)
 		{
 			//inet_addr_((uint8_t*)param, value->network_info_common.local_ip);
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.ip);
-			printf("IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+			//printf("IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
 		}
 		//boc tach Getway
 		if((param = get_http_param_value((char *)uri, "gw")))
 		{
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.gw);
-			printf("Getway: %d.%d.%d.%d\r\n",myipWIZNETINFO.gw[0],myipWIZNETINFO.gw[1],myipWIZNETINFO.gw[2],myipWIZNETINFO.gw[3]);
+			//printf("Getway: %d.%d.%d.%d\r\n",myipWIZNETINFO.gw[0],myipWIZNETINFO.gw[1],myipWIZNETINFO.gw[2],myipWIZNETINFO.gw[3]);
 		}
 		//boc tach Subnet
 		if((param = get_http_param_value((char *)uri, "sn")))
 		{
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.sn);
-			printf("Subnet: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
+			//printf("Subnet: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
 		}
 		//boc tach NTP server IP
 		if((param = get_http_param_value((char *)uri, "ntpip")))
 		{
 			inet_addr_((uint8_t*)param, ntpTimeServer_ip);
-			printf("NTP server IP: %d.%d.%d.%d\r\n",ntpTimeServer_ip[0],ntpTimeServer_ip[1],ntpTimeServer_ip[2],ntpTimeServer_ip[3]);
+			//printf("NTP server IP: %d.%d.%d.%d\r\n",ntpTimeServer_ip[0],ntpTimeServer_ip[1],ntpTimeServer_ip[2],ntpTimeServer_ip[3]);
+		}
+		//light
+		if((param = get_http_param_value((char *)uri, "light")))
+		{
+			inet_addr_((uint8_t*)param, &LEDintensity);
+			if(LEDintensity > 15) LEDintensity = 15;
+			if(LEDintensity < 1) LEDintensity = 1;
 		}
 	return ip;
 }

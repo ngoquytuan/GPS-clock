@@ -109,6 +109,7 @@ void w5500_lib_init(void);
 void checklink(void);
 void MAX7219_Init (void);
 void MAX7219_SendAddrDat (unsigned char addr,unsigned char dat);
+
 void display_init_check(void);
 void console_blink(void);
 void console_display(void);
@@ -119,6 +120,7 @@ void MAX7219_Init2 (void);
 void MAX7219_SendAddrDat2 (unsigned char addr,unsigned char dat);
 void day_display(void);
 #endif
+
 //define for DS3231
 #define DS_SECOND_REG 0
 #define DS_MIN_REG 1

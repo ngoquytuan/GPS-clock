@@ -34,8 +34,8 @@ int8_t count_Stable_signal = 0;
 int8_t timeOutLostSignal = 0;
 //Thoi gian luu gio tu RS485 vao RTC
 int16_t timeSaveRS485_to_RTC = 60;
-
-
+uint32_t countOfMasterMessages = 0;	
+uint32_t countOfNTPrequest = 0;	
 //----------------------Phan giao tiep i2c-thoi gian thuc ---------------------//
 //Phai pull up SDA SCL
 unsigned char i2c_write[1];
@@ -410,19 +410,24 @@ void uart2_processing(void)
 void led_matrix_fucs_init(void)
 {
 	
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 	#ifdef DebugEnable
 	printf("This code gen by STMcube STM32G474@128MHz\r\n");
 	#endif
 	stm32g474_FactoryLoad();
 	//stm32g474flashEraseThenSave();
 	//LEDintensity = 1;
+#ifdef SLAVE_MATRIX
 	up7_matrix_init();
 	line2_matrix_init();
 	load_line1(88,88,88);
 	scan_7up();
 	load_line2(88,88,88,1);
 	scan_5down();
+#endif
+#ifndef SLAVE_MATRIX	
+	display_init_check();
+#endif	
 	HAL_Delay(500);
 	
 	w5500_lib_init();
@@ -432,14 +437,23 @@ void led_matrix_fucs_init(void)
 	
 	laythoigian();
 	#ifdef DebugEnable
-	printf("Time :%dh%dm%ds;%d %d/%d/%d; LED intensity : %d\r\n",ds3231_reg[2],ds3231_reg[1],ds3231_reg[0],ds3231_reg[3],ds3231_reg[4],ds3231_reg[5],ds3231_reg[6], LEDintensity);
+	printf("Time :%dh%dm%ds;%d %d/%d/%d; LED intensity : %d\r\n",hours,minutes,seconds,ds3231_reg[3],days,months,years, LEDintensity);
 	#endif
 	
+#ifdef SLAVE_MATRIX
 	load_line1(days,months,years);
 	scan_7up();
 	load_line2(hours,minutes,seconds,1);
 	scan_5down();
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+#endif
+#ifndef SLAVE_MATRIX
+#ifdef SLAVE_WALL			
+			day_display();
+#endif
+			console_display();
+			console_blink();
+#endif
+//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	/** Cac che do hoat dong cua dong ho slave
 	*  Hoat dong theo RTC hoac NTP client hoac RS485
 	*  Uu tien 1: NTP client, neu khong co day mang, khong ket noi dc server thi cho tin hieu rs485, neu cung ko co tin hieu rs485 tiep tuc chay local
@@ -454,9 +468,9 @@ void led_matrix_fucs(void)
 	if(timct > 990) {
 			timct = 0;
 
-			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 			
-			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 
 			
 			if(timeOutLostSignal) timeOutLostSignal--;
@@ -501,29 +515,40 @@ void led_matrix_fucs(void)
 			}
 			
 		}
-	if((waitForSetTime == 1) && (TIM1->CNT > 9980)) 
+	if((waitForSetTime == 1) && (TIM1->CNT > 9936)) 
 		{
 			waitForSetTime = 0;
+			countOfNTPrequest++;	
 			seconds++;
 			RTC_Update();
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 			printf("Time set IT\r\n");
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+
+#ifdef SLAVE_MATRIX
 			load_line1(days,months,years);
 			scan_7up();
 			load_line2(hours,minutes,seconds,1);
 			scan_5down();
-		}
-	#ifdef DebugEnable
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-	SNTP_run2();
-	HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-	#endif
+#endif
+#ifndef SLAVE_MATRIX
+#ifdef SLAVE_WALL			
+			day_display();
+#endif
+			console_display();
+			console_blink();
+#endif
+			}
+	
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+			SNTP_run2();
+			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	
 	
-	snmpd_run2();
-	uart2_processing();
-	// web server 	
+	
+			snmpd_run2();
+			uart2_processing();
+			// web server 	
 			httpServer_run(0);
 			httpServer_run(1);
 			httpServer_run(2);
@@ -567,24 +592,21 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 //		printf("Factory reset\r\n");
 //		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
-		LEDintensity++;
-		if(LEDintensity > 15) LEDintensity =1;
 		chinhdosang();
 		//Luu bo sang moi vao bo nho!
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 		stm32g474flashEraseThenSave();
-		HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+		
   }
 	if (GPIO_Pin == SQW_Pin)
   {
-		if(waitForSetTime == 0) fractionOfSecond = 0;
 		//Dong bo lai phan le cua giay
+		if(waitForSetTime == 0) fractionOfSecond = 0;
 		//RTC second
 		//RTC hoat dong binh thuong
-		rtc_timeout = 0;
-  	update_display();
-		//t1 = fractionOfSecond;
-		timenow++;
+		//rtc_timeout = 0;
+  	timenow++;
+		update_display();
+		
   }
 
 }
@@ -597,8 +619,17 @@ void update_display(void)
 			//Moi phut se dong bo thoi gian voi RTC mot lan
 			laythoigian();
 		}	
-	load_line1(days,months,years);
-	scan_7up();
-	load_line2(hours,minutes,seconds,1);
-	scan_5down();
+#ifdef SLAVE_MATRIX
+			load_line1(days,months,years);
+			scan_7up();
+			load_line2(hours,minutes,seconds,1);
+			scan_5down();
+#endif
+#ifndef SLAVE_MATRIX
+#ifdef SLAVE_WALL			
+			day_display();
+#endif
+			console_display();
+			console_blink();
+#endif
 }

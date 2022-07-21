@@ -38,7 +38,7 @@ time_t newfractionOfSecond;
 
 #define ntpClientDebug
 #define	MAX_SNTP_BUF_SIZE	sizeof(ntpformat)		///< maximum size of DNS buffer. */
-uint32_t countOfNTPrequest = 0;	
+
 
 #define sntp_port 1234 //my sntp port, cho de gui ban ti ve
 #define ntp_port		123                     //ntp server port number
@@ -146,10 +146,20 @@ int8_t SNTP_run(void)//datetime sntp;
 			seconds = timeinfo->tm_sec;
 			
 			RTC_Update();
+			
+#ifdef SLAVE_MATRIX
 			load_line1(days,months,years);
 			scan_7up();
 			load_line2(hours,minutes,seconds,1);
 			scan_5down();
+#endif
+#ifndef SLAVE_MATRIX
+#ifdef SLAVE_WALL			
+			day_display();
+#endif
+			console_display();
+			console_blink();
+#endif
 			
 			TimeIsSet = 1;
 			close(SOCK_SNTP);
@@ -162,7 +172,7 @@ int8_t SNTP_run(void)//datetime sntp;
 				{
 					RetrySend = 0;
 					sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
-					countOfNTPrequest++;
+					//countOfNTPrequest++;
 					//sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
 #ifdef			ntpClientDebug		
 					printf("NTP ask for time sent");					
@@ -198,6 +208,7 @@ int8_t SNTP_run(void)//datetime sntp;
 
 int8_t procesingNTPmessage(void)
 {
+				
 			t3Frac = fractionOfSecond;
 			t3 = timenow;
 			round_trip_delay = t3 -t0;
@@ -242,13 +253,17 @@ int8_t procesingNTPmessage(void)
 			hours = timeinfo->tm_hour;
 			minutes = timeinfo->tm_min;
 			seconds = timeinfo->tm_sec;
+			//Bo qua tranh loi
+			if(seconds > 58) return 0;
 			
-			
-			if(newfractionOfSecond > 9980)//Sang giay moi roi....
+			if(newfractionOfSecond > 9963)//Sang giay moi roi....
 			{
-				seconds++;
-				RTC_Update();
-				printf("Time set NTP");
+				//Thoi gian con it qua, neu luu co the bi tre
+				//seconds++;
+				//RTC_Update();
+				//printf("Time set NTP");
+				//Bo qua...
+				return 0;
 			}
 			else {waitForSetTime = 1;}
 			
@@ -258,10 +273,19 @@ int8_t procesingNTPmessage(void)
 		  //printf("DD-MM-YY :%d-%d-%d\r\n",days,months,years);
 			#endif
 			
+#ifdef SLAVE_MATRIX
 			load_line1(days,months,years);
 			scan_7up();
 			load_line2(hours,minutes,seconds,1);
 			scan_5down();
+#endif
+#ifndef SLAVE_MATRIX
+#ifdef SLAVE_WALL			
+			day_display();
+#endif
+			console_display();
+			console_blink();
+#endif
 			
 			TimeIsSet = 1;
 			return 1;
@@ -272,7 +296,7 @@ void sendNTPpacket(void)
 	NTP_busy = 1;				
 					t0 = timenow;
 					t0Frac = fractionOfSecond;
-					countOfNTPrequest++;
+					
 #ifdef			ntpClientDebug		
 					printf("NTP ask...\r\n");					
 //					printf("Gui ban tin di :");//35 0 6 236 0 0 0 0 0 0 0 0 49 78 49 52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -303,7 +327,7 @@ int8_t SNTP_run2(void)//datetime sntp;
 	
 	if (sycnPeriod >= 61) // dong bo lai thoi gian
 	{
-		printf("TimeIsSet = 0\r\n");
+		//printf("TimeIsSet = 0\r\n");
 		TimeIsSet = 0;
 		sycnPeriod = 0;
 		RetrySend = 19;
@@ -321,14 +345,14 @@ int8_t SNTP_run2(void)//datetime sntp;
 			if(procesingNTPmessage() == 0) 
 			{
 				close(SOCK_SNTP);
-				printf("Closed SOCK NTP1");
+				//printf("Closed SOCK NTP1");
 				NTP_busy = 0;
 				return 0;
 			}
 			
 			NTP_busy = 0;
 			close(SOCK_SNTP);
-			printf("Closed SOCK NTP\r\n");
+			//printf("Closed SOCK NTP\r\n");
 			return 1;
 		}
 		

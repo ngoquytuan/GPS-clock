@@ -37,6 +37,7 @@ int32_t parseSNMPMessage(void);
 
 uint32_t countOfSNMPrequest = 0;
 extern uint32_t countOfNTPrequest;
+extern uint32_t countOfMasterMessages;	
 // Debugging function
 #ifdef _SNMP_DEBUG_
 void dumpCode(uint8_t* header, uint8_t* tail, uint8_t *buff, int32_t len);
@@ -96,14 +97,14 @@ void get_build_time(void *ptr, uint8_t *len)
 }
 void get_ntp_snmp_services(void *ptr, uint8_t *len)
 {
-	*len = sprintf((char *)ptr, "Request time: NTP= %d;SNMP= %d;",countOfNTPrequest, countOfSNMPrequest);
+	*len = sprintf((char *)ptr, "Request time: NTP= %d;SNMP= %d;RS485= %d;",countOfNTPrequest, countOfSNMPrequest, countOfMasterMessages);
 }
 dataEntryType snmpData[] =
 {
     // System MIB
 	// SysDescr Entry
 	{8, {0x2b, 6, 1, 2, 1, 1, 1, 0},
-	SNMPDTYPE_OCTET_STRING, 30, {"GPS clock time server, GPS master 2022"},
+	SNMPDTYPE_OCTET_STRING, 30, {"GPS clock time system 2022, Slave clock"},
 	NULL, NULL},
 
 	// SysObjectID Entry

@@ -33,6 +33,17 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #define DebugEnable
 
+//Chon 1 trong 3 loai
+//#define SLAVE_WALL
+#define SLAVE_CONSOLE
+//#define SLAVE_MATRIX
+
+#ifdef SLAVE_WALL
+	#ifdef SLAVE_CONSOLE
+	ERROR: Loi roi
+	#endif
+#endif
+
 #define ADDR_FLASH_PAGE_47    ((uint32_t)0x08017800) /* Base @ of Page 47, 2 Kbytes */
 #define ADDR_FLASH_PAGE_48    ((uint32_t)0x08018000) /* Base @ of Page 48, 2 Kbytes */
 #define ADDR_FLASH_PAGE_49    ((uint32_t)0x08018800) /* Base @ of Page 49, 2 Kbytes */
@@ -57,11 +68,7 @@ typedef struct {
 /* Size of Reception buffer */
 #define RXBUFFERSIZE                      100
 
-#define decodeMode  0x09
-#define intensity   0x0A
-#define scanLimit   0x0B
-#define shut_down   0x0C
-#define disTest     0x0F
+
 
 #define SIGNAL_FROM_MASTER_OK   1
 #define SIGNAL_FROM_MASTER_BAD  0
@@ -110,12 +117,29 @@ void stm32g474_FactoryLoad(void);
 void w5500_lib_init(void);
 void checklink(void);
 void control(void);
+
+#ifdef SLAVE_MATRIX
 void up7_matrix_init (void);
 void load_line1(uint8_t dis_date,uint8_t dis_month,uint8_t dis_year);
 void scan_7up(void);
 void scan_5down(void);
 void load_line2(uint8_t dis_hour,uint8_t dis_min,uint8_t dis_sec,uint8_t dot);
 void line2_matrix_init (void);
+#endif
+
+#ifndef SLAVE_MATRIX
+void display_init_check(void);
+void console_blink(void);
+void console_display(void);
+void RTC_factory_RST(void);
+void chinhdosang(void);
+#ifdef SLAVE_WALL
+void MAX7219_Init2 (void);
+void MAX7219_SendAddrDat2 (unsigned char addr,unsigned char dat);
+void day_display(void);
+#endif
+#endif
+
 void chinhdosang(void);
 void update_display(void);
 	

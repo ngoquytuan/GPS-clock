@@ -232,7 +232,7 @@
 	"<body>"\
 		"<div id='main'>"\
 			"<div id='head'>"\
-				"GPS MASTER CLOCK CONFIGURATION"\
+				"SLAVE CLOCK INFO"\
 			"</div>"\
 			"<div id='net_info_general'>"\
 				"<div id = 'list_head'>"\
@@ -378,7 +378,7 @@
 								"<title>GPS master clock web Server Network config</title>"\
 								"<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"\
 								"<style>"\
-								"label{float:left;text-align:left;width:50px;}"\
+								"label{float:left;text-align:left;width:60px;}"\
 								"li {list-style:none;}"\
 								"</style>"\
 								"<script type='text/javascript' src='ajax.js'></script>"\
@@ -405,7 +405,7 @@
 								"<title>Slave clock web Server Network info</title>"\
 								"<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"\
 								"<style>"\
-								"label{float:left;text-align:left;width:50px;}"\
+								"label{float:left;text-align:left;width:90px;}"\
 								"li {list-style:none;}"\
 								"</style>"\
 								"<script type='text/javascript' src='ajax.js'></script>"\
@@ -635,7 +635,7 @@
 								"<title>GPS master clock web Server Network config</title>"\
 								"<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"\
 								"<style>"\
-								"label{float:left;text-align:left;width:50px;}"\
+								"label{float:left;text-align:left;width:80px;}"\
 								"li {list-style:none;}"\
 								"</style>"\
 								"</head>"\
@@ -650,6 +650,10 @@
 										"<li><label for='gw'>GW:</label><input id='txtgw' name='gw' type='text' size='20' value=\"0.0.0.0\"></li> "\
 										"<li><label for='sn'>SN:</label><input id='txtsn' name='sn' type='text' size='20' value=\"255.255.255.0\"></li> "\
 										"<li><label for='txtdns'>DNS:</label><input id='txtdns' name='dns' type='text' size='20' value=\"0.0.0.0\"></li> "\
+										"<li><label for='txtntp'>NTP server:</label><input id='txtntp' name='ntpip' type='text' size='20' value=\"139.199.215.251\"> NTP time server's IP</li> "\
+										"<li><label for='txtlight'>LED light:</label><input id='txtlight' name='light' type='text' size='20' value=\"1\"> max 15, min 1</li><br> "\
+										"<input type=\"radio\" name=\"RS485\" value=\"1\"><i></i> Use RS485<br>"\
+										"<input type=\"radio\" name=\"NTP\" value=\"1\"><i></i> Use NTP<br><br>"\
 										"<input type=\"submit\" value=\"SAVE\">"\
 									"</ul>"\
 								"</body>"\

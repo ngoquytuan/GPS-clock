@@ -75,12 +75,32 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN 0 */
 uint8_t ntpTimeServer_ip[4] ={139, 199, 215, 251};// NTP time server
 
-wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x20},
+#ifdef SLAVE_CONSOLE
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x23},
 															 .ip = {192, 168, 22, 165},
 															 .sn = {255,255,255,0},
 															 .gw = {192, 168, 22, 252},
 															 .dns = {8,8,8,8},
 															 .dhcp = NETINFO_STATIC };
+#endif
+#ifdef SLAVE_WALL
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x21},
+															 .ip = {192, 168, 22, 165},
+															 .sn = {255,255,255,0},
+															 .gw = {192, 168, 22, 252},
+															 .dns = {8,8,8,8},
+															 .dhcp = NETINFO_STATIC };
+#endif
+
+#ifdef SLAVE_MATRIX
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x22},
+															 .ip = {192, 168, 22, 165},
+															 .sn = {255,255,255,0},
+															 .gw = {192, 168, 22, 252},
+															 .dns = {8,8,8,8},
+															 .dhcp = NETINFO_STATIC };
+#endif
+
 
 
 time_t built_time,timenow = 1657599346;
@@ -113,8 +133,11 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
+	
+	//LOAD FS
+	//config ...
+  
+	/* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();

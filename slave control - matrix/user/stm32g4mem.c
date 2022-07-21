@@ -124,13 +124,13 @@ void stm32g474flashEraseThenSave(void)
     if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR, temp) == HAL_OK)
     {
 			#ifdef DebugEnable
-			printf("Saved IP & SN!\r\n");
+			//printf("Saved IP & SN!\r\n");
 			#endif
     }
 		else
     {
 			#ifdef DebugEnable
-			printf("Error occurred while writing\r\n");
+			//printf("Error occurred while writing\r\n");
       #endif
     }
 		
@@ -145,13 +145,13 @@ void stm32g474flashEraseThenSave(void)
     if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR+8, temp) == HAL_OK)
     {
 			#ifdef DebugEnable
-			printf("Saved GW & DNS!\r\n");
+			//printf("Saved GW & DNS!\r\n");
 			#endif
     }
 		else 
     {
 			#ifdef DebugEnable
-			printf("Cant save GW & DNS\r\n");
+			//printf("Cant save GW & DNS\r\n");
 			#endif
     }
 		
@@ -162,13 +162,13 @@ void stm32g474flashEraseThenSave(void)
 		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR+16, temp) == HAL_OK)
     {
 			#ifdef DebugEnable
-			printf("Saved password\r\n");
+			//printf("Saved password\r\n");
 			#endif
     }
 		else 
     {
 			#ifdef DebugEnable
-			printf("Cant save password\r\n");
+			//printf("Cant save password\r\n");
 			#endif
     }
 		
@@ -178,13 +178,13 @@ void stm32g474flashEraseThenSave(void)
 		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR+24, temp) == HAL_OK)
     {
 			#ifdef DebugEnable
-			printf("Saved NTP server IP\r\n");
+			//printf("Saved NTP server IP\r\n");
 			#endif
     }
 		else 
     {
 			#ifdef DebugEnable
-			printf("Cant save NTP server IP\r\n");
+			//printf("Cant save NTP server IP\r\n");
 			#endif
     }
   
@@ -196,7 +196,7 @@ void stm32g474_FactoryLoad(void)
 	if(myMem->keyword == 0x12345678)
 	{
 		#ifdef DebugEnable
-		printf("Mem ok, load and return\r\n");
+		//printf("Mem ok, load and return\r\n");
 		#endif
 		//Muc sang cua LED
 		LEDintensity 				 = myMem->LED_intensity;
@@ -228,7 +228,7 @@ void stm32g474_FactoryLoad(void)
 		return;
 	}
 	#ifdef DebugEnable
-		printf("Mem lost, load default\r\n");
+		//printf("Mem lost, load default\r\n");
 	#endif
 	stm32g474flashEraseThenSave();
 }
