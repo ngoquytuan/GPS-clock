@@ -276,7 +276,14 @@ void snmpd_init(uint8_t * managerIP, uint8_t * agentIP, uint8_t sn_agent, uint8_
 
 }
 
-int32_t snmpd_run2(void)
+/**
+ * SNMP Process Handler.
+ * UDP Socket and SNMP Agent transaction handling.
+ *
+ * @param none
+ * @return none
+ */
+int32_t snmpd_run(void)
 {
   int32_t ret;
 	int32_t len = 0;
@@ -340,87 +347,9 @@ int32_t snmpd_run2(void)
 
 	return 1;
 }
-/**
- * SNMP Process Handler.
- * UDP Socket and SNMP Agent transaction handling.
- *
- * @param none
- * @return none
- */
-
-int32_t snmpd_run(void)
-{
-  int32_t ret;
-	int32_t len = 0;
-  //uint8_t a[4] = {192,168,22,164};  
-	uint8_t svr_addr[6];
-	uint16_t  svr_port;
-
-	if(SOCK_SNMP_AGENT > _WIZCHIP_SOCK_NUM_) return -99;
-    
-	switch(getSn_SR(SOCK_SNMP_AGENT))
-	{
-		case SOCK_UDP :
-			if ( (len = getSn_RX_RSR(SOCK_SNMP_AGENT)) > 0)
-			{
-				request_msg.len= recvfrom(SOCK_SNMP_AGENT, request_msg.buffer, len, svr_addr, &svr_port);
-			}
-			else
-			{
-				request_msg.len = 0;
-			}
-
-			if (request_msg.len > 0)
-			{
-#ifdef _SNMP_DEBUG_
-				dumpCode((void *)"\r\n[Request]\r\n", (void *)"\r\n", request_msg.buffer, request_msg.len);
-#endif
-				// Initialize
-				request_msg.index = 0;
-				response_msg.index = 0;
-				errorStatus = errorIndex = 0;
-				memset(response_msg.buffer, 0x00, MAX_SNMPMSG_LEN);
-
-				// Received message parsing and send response process
-				if (parseSNMPMessage() != -1)
-				{
-					ret = sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
-					
-					//printf("sent \r\n");
-					if(ret < 0)
-               {
-                  //printf("S %d: sendto error. %d\r\n",SOCK_SNMP_AGENT,ret);
-                  return ret;
-               }
-				}
-
-#ifdef _SNMP_DEBUG_
-				
-				printf("S %d: sendto %d.%d.%d.%d port %d\r\n",SOCK_SNMP_AGENT,svr_addr[0],svr_addr[1],svr_addr[2],svr_addr[3],svr_port);
-				dumpCode((void *)"\r\n[Response]\r\n", (void *)"\r\n", response_msg.buffer, response_msg.index);
-				sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
-				sendto(4,response_msg.buffer, response_msg.index, svr_addr, svr_port);
-				//sendto(SOCK_UDPS,serverPacket,NTP_PACKET_SIZE,destip,destport);
-				printf("sent \r\n");
-#endif
-			}
-			break;
-
-		case SOCK_CLOSED :
-			if((ret = socket(SOCK_SNMP_AGENT, Sn_MR_UDP, PORT_SNMP_AGENT, 0x00)) != SOCK_SNMP_AGENT)
-				return ret;
-#ifdef _SNMP_DEBUG_
-			printf(" Socket[%d] UDP Socket for SNMP Agent, port [%d]\r\n", SOCK_SNMP_AGENT, PORT_SNMP_AGENT);
-#endif
-			break;
-
-		default :
-			break;
-	}
 
 
-	return 1;
-}
+
 
 
 int32_t findEntry(uint8_t *oid, int32_t len)
@@ -1143,4 +1072,80 @@ void dumpCode(uint8_t* header, uint8_t* tail, uint8_t *buff, int32_t len)
 	printf((char const*)tail);
 }
 #endif
+
+/**
+int32_t snmpd_run(void)
+{
+  int32_t ret;
+	int32_t len = 0;
+  //uint8_t a[4] = {192,168,22,164};  
+	uint8_t svr_addr[6];
+	uint16_t  svr_port;
+
+	if(SOCK_SNMP_AGENT > _WIZCHIP_SOCK_NUM_) return -99;
+    
+	switch(getSn_SR(SOCK_SNMP_AGENT))
+	{
+		case SOCK_UDP :
+			if ( (len = getSn_RX_RSR(SOCK_SNMP_AGENT)) > 0)
+			{
+				request_msg.len= recvfrom(SOCK_SNMP_AGENT, request_msg.buffer, len, svr_addr, &svr_port);
+			}
+			else
+			{
+				request_msg.len = 0;
+			}
+
+			if (request_msg.len > 0)
+			{
+#ifdef _SNMP_DEBUG_
+				dumpCode((void *)"\r\n[Request]\r\n", (void *)"\r\n", request_msg.buffer, request_msg.len);
+#endif
+				// Initialize
+				request_msg.index = 0;
+				response_msg.index = 0;
+				errorStatus = errorIndex = 0;
+				memset(response_msg.buffer, 0x00, MAX_SNMPMSG_LEN);
+
+				// Received message parsing and send response process
+				if (parseSNMPMessage() != -1)
+				{
+					ret = sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
+					
+					//printf("sent \r\n");
+					if(ret < 0)
+               {
+                  //printf("S %d: sendto error. %d\r\n",SOCK_SNMP_AGENT,ret);
+                  return ret;
+               }
+				}
+
+#ifdef _SNMP_DEBUG_
+				
+				printf("S %d: sendto %d.%d.%d.%d port %d\r\n",SOCK_SNMP_AGENT,svr_addr[0],svr_addr[1],svr_addr[2],svr_addr[3],svr_port);
+				dumpCode((void *)"\r\n[Response]\r\n", (void *)"\r\n", response_msg.buffer, response_msg.index);
+				sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
+				sendto(4,response_msg.buffer, response_msg.index, svr_addr, svr_port);
+				//sendto(SOCK_UDPS,serverPacket,NTP_PACKET_SIZE,destip,destport);
+				printf("sent \r\n");
+#endif
+			}
+			break;
+
+		case SOCK_CLOSED :
+			if((ret = socket(SOCK_SNMP_AGENT, Sn_MR_UDP, PORT_SNMP_AGENT, 0x00)) != SOCK_SNMP_AGENT)
+				return ret;
+#ifdef _SNMP_DEBUG_
+			printf(" Socket[%d] UDP Socket for SNMP Agent, port [%d]\r\n", SOCK_SNMP_AGENT, PORT_SNMP_AGENT);
+#endif
+			break;
+
+		default :
+			break;
+	}
+
+
+	return 1;
+}
+*/
 

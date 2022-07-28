@@ -110,7 +110,6 @@ typedef struct {
 void snmp_init(void);
 void snmpd_init(uint8_t * managerIP, uint8_t * agentIP, uint8_t sn_agent, uint8_t sn_trap);
 int32_t snmpd_run(void);
-int32_t snmpd_run2(void);
 int32_t snmp_sendTrap(uint8_t * managerIP, uint8_t * agentIP, int8_t* community, dataEntryType enterprise_oid, uint32_t genericTrap, uint32_t specificTrap, uint32_t va_count, ...);
 
 // SNMP Time handler functions

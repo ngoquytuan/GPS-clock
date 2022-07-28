@@ -93,118 +93,6 @@ void SNTP_init(void)
 
 
 
-int8_t SNTP_run(void)//datetime sntp;
-{
-	uint32_t ret;
-	uint16_t size;
-	uint32_t destip = 0;
-	uint16_t destport;
-	//uint16_t startindex = 40; //last 8-byte of data_buf[size is 48 byte] is xmt, so the startindex should be 40
-	int8_t i;
-	uint32_t sec;
-	if (sycnPeriod >= 320) // dong bo lai thoi gian
-	{
-		TimeIsSet = 0;
-		sycnPeriod = 0;
-		RetrySend = 0;
-	}
-	if(TimeIsSet == 1) return 1;
-	
-	switch(getSn_SR(SOCK_SNTP))
-	{
-	case SOCK_UDP:
-		if ((size = getSn_RX_RSR(SOCK_SNTP)) > 0)
-		{
-#ifdef			ntpClientDebug
-			printf("\r\nsize:%d, ret:%d, NTP: ",size,ret);
-#endif
-			if (size > 56) size = 56;	// if Rx data size is lager than TX_RX_MAX_BUF_SIZE
-			recvfrom(SOCK_SNTP, ntpTimeServer_buf, size, (uint8_t *)&destip, &destport);
-			//Mot ban tin tu NTP Time Server
-			//24 3 6 e8 0 0 2c 3c 0 0 e 7d 8e 93 5c 5 e1 6 3a 76 77 3a 48 cf 0 0 0 0 0 0 0 0 e1 6 3e 9d 25 4f 82 99 e1 6 3e 9d 25 52 19 13
-//			for(i=0;i<48;i++)
-//						{
-//						   printf("%x ",*(ntpTimeServer_buf+i));
-//						}
-			sec = (ntpTimeServer_buf[40]<<24) + (ntpTimeServer_buf[41]<<16) + (ntpTimeServer_buf[42]<<8) + ntpTimeServer_buf[43] ;
-			//printf("Seconds: %u\r\n",sec-seventyYears);
-			timenow = sec-seventyYears;
-			
-			printf("\r\nSynced with ntp server, seconds: %u\r\n",timenow);
-			timeinfo = localtime( &timenow );
-			asctime(timeinfo);
-			#ifdef			ntpClientDebug
-			printf("Current local time and date: %s\r\n", asctime(timeinfo));
-		  printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
-		  printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
-			#endif
-			days = timeinfo->tm_mday;
-			months = 1+timeinfo->tm_mon;
-			years = timeinfo->tm_year-100;
-			hours = timeinfo->tm_hour;
-			minutes = timeinfo->tm_min;
-			seconds = timeinfo->tm_sec;
-			
-			RTC_Update();
-			
-#ifdef SLAVE_MATRIX
-			load_line1(days,months,years);
-			scan_7up();
-			load_line2(hours,minutes,seconds,1);
-			scan_5down();
-#endif
-#ifndef SLAVE_MATRIX
-#ifdef SLAVE_WALL			
-			day_display();
-#endif
-			console_display();
-			console_blink();
-#endif
-			
-			TimeIsSet = 1;
-			close(SOCK_SNTP);
-
-			return 1;
-		}
-				if(TimeIsSet == 0) //chua chinh gio
-			{
-				if(RetrySend > 60) //Try Again gui ban tin hoi gio
-				{
-					RetrySend = 0;
-					sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
-					//countOfNTPrequest++;
-					//sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
-#ifdef			ntpClientDebug		
-					printf("NTP ask for time sent");					
-//					printf("Gui ban tin di :");//35 0 6 236 0 0 0 0 0 0 0 0 49 78 49 52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-//					for(i=0;i<48;i++)
-//					{
-//						printf("%d ",*(ntpmessage+i));
-//					
-//					}
-//					printf("\r\n");
-#endif					
-				}
-				return 0;
-			}
-			
-			
-		
-		break;
-	case SOCK_CLOSED:
-	    //printf("%d:SNTP client try to start at port %d\r\n",SOCK_SNTP,sntp_port);
-		//socket(NTP_SOCKET,Sn_MR_UDP,sntp_port,0);
-		if((ret=socket(SOCK_SNTP,Sn_MR_UDP,sntp_port,0x00)) != SOCK_SNTP)
-            return ret;
-		//printf("%d:Opened, port [%d]\r\n",SOCK_SNTP, sntp_port);
-		printf(" Socket[%d] UDP Socket for SNTP client started at port [%d]\r\n", SOCK_SNTP, sntp_port);
-		break;
-	}
-	// Return value
-	// 0 - failed / 1 - success
-	return 0;
-}
-
 
 int8_t procesingNTPmessage(void)
 {
@@ -316,7 +204,7 @@ Tinh toan phan le cua giay( fraction Of Second) : https://en.wikipedia.org/wiki/
 #ifdef			ntpClientDebug
 			#endif
 */
-int8_t SNTP_run2(void)//datetime sntp;
+int8_t SNTP_run(void)//datetime sntp;
 {
 	uint32_t ret;
 	uint16_t size;
@@ -442,6 +330,117 @@ int8_t SNTP_run2(void)//datetime sntp;
 47) UTC+12:45 (Summer)New Zealand
 48) UTC+13:00 Tonga
 49) UTC+14:00 Kiribati (Line Islands)
+int8_t SNTP_run(void)//datetime sntp;
+{
+	uint32_t ret;
+	uint16_t size;
+	uint32_t destip = 0;
+	uint16_t destport;
+	//uint16_t startindex = 40; //last 8-byte of data_buf[size is 48 byte] is xmt, so the startindex should be 40
+	int8_t i;
+	uint32_t sec;
+	if (sycnPeriod >= 320) // dong bo lai thoi gian
+	{
+		TimeIsSet = 0;
+		sycnPeriod = 0;
+		RetrySend = 0;
+	}
+	if(TimeIsSet == 1) return 1;
+	
+	switch(getSn_SR(SOCK_SNTP))
+	{
+	case SOCK_UDP:
+		if ((size = getSn_RX_RSR(SOCK_SNTP)) > 0)
+		{
+#ifdef			ntpClientDebug
+			printf("\r\nsize:%d, ret:%d, NTP: ",size,ret);
+#endif
+			if (size > 56) size = 56;	// if Rx data size is lager than TX_RX_MAX_BUF_SIZE
+			recvfrom(SOCK_SNTP, ntpTimeServer_buf, size, (uint8_t *)&destip, &destport);
+			//Mot ban tin tu NTP Time Server
+			//24 3 6 e8 0 0 2c 3c 0 0 e 7d 8e 93 5c 5 e1 6 3a 76 77 3a 48 cf 0 0 0 0 0 0 0 0 e1 6 3e 9d 25 4f 82 99 e1 6 3e 9d 25 52 19 13
+//			for(i=0;i<48;i++)
+//						{
+//						   printf("%x ",*(ntpTimeServer_buf+i));
+//						}
+			sec = (ntpTimeServer_buf[40]<<24) + (ntpTimeServer_buf[41]<<16) + (ntpTimeServer_buf[42]<<8) + ntpTimeServer_buf[43] ;
+			//printf("Seconds: %u\r\n",sec-seventyYears);
+			timenow = sec-seventyYears;
+			
+			printf("\r\nSynced with ntp server, seconds: %u\r\n",timenow);
+			timeinfo = localtime( &timenow );
+			asctime(timeinfo);
+			#ifdef			ntpClientDebug
+			printf("Current local time and date: %s\r\n", asctime(timeinfo));
+		  printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
+		  printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
+			#endif
+			days = timeinfo->tm_mday;
+			months = 1+timeinfo->tm_mon;
+			years = timeinfo->tm_year-100;
+			hours = timeinfo->tm_hour;
+			minutes = timeinfo->tm_min;
+			seconds = timeinfo->tm_sec;
+			
+			RTC_Update();
+			
+#ifdef SLAVE_MATRIX
+			load_line1(days,months,years);
+			scan_7up();
+			load_line2(hours,minutes,seconds,1);
+			scan_5down();
+#endif
+#ifndef SLAVE_MATRIX
+#ifdef SLAVE_WALL			
+			day_display();
+#endif
+			console_display();
+			console_blink();
+#endif
+			
+			TimeIsSet = 1;
+			close(SOCK_SNTP);
+
+			return 1;
+		}
+				if(TimeIsSet == 0) //chua chinh gio
+			{
+				if(RetrySend > 60) //Try Again gui ban tin hoi gio
+				{
+					RetrySend = 0;
+					sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
+					//countOfNTPrequest++;
+					//sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
+#ifdef			ntpClientDebug		
+					printf("NTP ask for time sent");					
+//					printf("Gui ban tin di :");//35 0 6 236 0 0 0 0 0 0 0 0 49 78 49 52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+//					for(i=0;i<48;i++)
+//					{
+//						printf("%d ",*(ntpmessage+i));
+//					
+//					}
+//					printf("\r\n");
+#endif					
+				}
+				return 0;
+			}
+			
+			
+		
+		break;
+	case SOCK_CLOSED:
+	    //printf("%d:SNTP client try to start at port %d\r\n",SOCK_SNTP,sntp_port);
+		//socket(NTP_SOCKET,Sn_MR_UDP,sntp_port,0);
+		if((ret=socket(SOCK_SNTP,Sn_MR_UDP,sntp_port,0x00)) != SOCK_SNTP)
+            return ret;
+		//printf("%d:Opened, port [%d]\r\n",SOCK_SNTP, sntp_port);
+		printf(" Socket[%d] UDP Socket for SNTP client started at port [%d]\r\n", SOCK_SNTP, sntp_port);
+		break;
+	}
+	// Return value
+	// 0 - failed / 1 - success
+	return 0;
+}
 */
 
 

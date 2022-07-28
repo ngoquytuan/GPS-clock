@@ -273,14 +273,15 @@ void main_message_handle(void)
 		
 		haveSignalFromRS485 = HAVE_SIGNAL;
 		timeOutLostSignal = 10;
-	  if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
-		if(count_Stable_signal >= STABE_NUMBER) 
-			{
-				stableSignal = SIGNAL_FROM_MASTER_OK;
-			}
+//	  if(count_Stable_signal < STABE_NUMBER) count_Stable_signal++; 
+//		if(count_Stable_signal >= STABE_NUMBER) 
+//			{
+//				stableSignal = SIGNAL_FROM_MASTER_OK;
+//			}
+			
 		if((aRxBuffer[16]=='A') || (aRxBuffer[17]=='A') )
 						{ 
-							slave_clock.sync_status = GPS;
+							slave_clock.sync_status = GREEN;
 						}
 		if((aRxBuffer[16]=='V') && (aRxBuffer[17]=='V') )				
 		  slave_clock.sync_status = BOTH;
@@ -405,9 +406,9 @@ void slaveClockFucnsInit(void)
 	loadwebpages();
 	
 	laythoigian();
-	#ifdef DebugEnable
+	
 	printf("Time :%dh%dm%ds;%d %d/%d/%d; LED intensity : %d\r\n",hours,minutes,seconds,ds3231_reg[3],days,months,years, LEDintensity);
-	#endif
+	
 	
 #ifdef SLAVE_MATRIX
 	load_line1(days,months,years);
@@ -446,6 +447,11 @@ void slaveClockRun(void)
 	if(timct > 990) {
 			timct = 0;
 
+			if(slave_clock.sync_status == GREEN)
+			{
+				if(count_Stable_signal > 0) count_Stable_signal--;
+				if(count_Stable_signal == 0) slave_clock.sync_status = RED;
+			}
 			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 			
 			//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
@@ -466,36 +472,39 @@ void slaveClockRun(void)
 			
 			//kiem tra tinh on dinh cua du lieu GPS
 				 
-			//slave_clock.sync_status = LOCAL;
+			//slave_clock.sync_status = RED;
 			
-			if(stableSignal == SIGNAL_FROM_MASTER_OK) count_Stable_signal--; 
-      if(count_Stable_signal == 0) 
-				{
-					stableSignal = SIGNAL_FROM_MASTER_BAD;
-					haveSignalFromRS485 = NO_SIGNAL;
-					slave_clock.sync_status = LOCAL;
-				}
+//			if(stableSignal == SIGNAL_FROM_MASTER_OK) count_Stable_signal--; 
+//      if(count_Stable_signal == 0) 
+//				{
+//					stableSignal = SIGNAL_FROM_MASTER_BAD;
+//					haveSignalFromRS485 = NO_SIGNAL;
+//					//slave_clock.sync_status = RED;
+//				}
 			
 			//if((timeSaveRS485_to_RTC > 1) && (stableSignal == SIGNAL_FROM_MASTER_OK)) timeSaveRS485_to_RTC --;
-				if((timeSaveRS485_to_RTC > 1)) timeSaveRS485_to_RTC --;
+				//if((timeSaveRS485_to_RTC > 1)) timeSaveRS485_to_RTC --;
 			
-			if(rtc_timeout > 1) rtc_timeout --;
-			if(rtc_timeout == 1) 
-			{
-				slave_clock.rtc_status = RTC_OUT_OF_BATTERY;
-			}
-			if(rtc_timeout == 0) 
-			{
-				slave_clock.rtc_status = RTC_FINE;
-			}
+//			if(rtc_timeout > 1) rtc_timeout --;
+//			if(rtc_timeout == 1) 
+//			{
+//				slave_clock.rtc_status = RTC_OUT_OF_BATTERY;
+//			}
+//			if(rtc_timeout == 0) 
+//			{
+//				slave_clock.rtc_status = RTC_FINE;
+//			}
 			
 		}
+	
 	if((waitForSetTime == 1) && (TIM1->CNT > 9936)) 
 		{
 			waitForSetTime = 0;
 			countOfNTPrequest++;	
 			seconds++;
 			RTC_Update();
+			slave_clock.sync_status = GREEN;
+			count_Stable_signal = 16;
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
 			printf("Time set IT\r\n");
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
@@ -514,16 +523,17 @@ void slaveClockRun(void)
 			console_blink();
 #endif
 			}
+		
+			uart2_processing();
+			
 			if(phylink != PHY_LINK_ON) return;// ko cam day mang thi ko lam gi het!!!
 			
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
-			SNTP_run2();
+			SNTP_run();
 			HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
 	
-	
-	
-			snmpd_run2();
-			uart2_processing();
+			//SNMP
+			snmpd_run();
 			// web server 	
 			httpServer_run(0);
 			httpServer_run(1);

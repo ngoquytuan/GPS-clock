@@ -42,7 +42,19 @@ extern "C" {
 	#ifdef SLAVE_CONSOLE
 	ERROR: Loi roi
 	#endif
+	#ifdef SLAVE_MATRIX
+	ERROR: Loi roi
+	#endif
 #endif
+#ifdef SLAVE_CONSOLE
+	#ifdef SLAVE_WALL
+	ERROR: Loi roi
+	#endif
+	#ifdef SLAVE_MATRIX
+	ERROR: Loi roi
+	#endif
+#endif
+
 
 #define ADDR_FLASH_PAGE_47    ((uint32_t)0x08017800) /* Base @ of Page 47, 2 Kbytes */
 #define ADDR_FLASH_PAGE_48    ((uint32_t)0x08018000) /* Base @ of Page 48, 2 Kbytes */
@@ -75,11 +87,11 @@ typedef struct {
 
 //Trang thai hoat dong cua dong ho console
 //lay thoi gian tu DS3231
-#define LOCAL 1
+#define RED 		1
 //Lay thoi gian tu dong ho master ( co dong bo)
-#define GPS   0
+#define GREEN   0
 // No GPS and  synced
-#define BOTH   2
+#define BOTH    2
 
 #define STABE_NUMBER 				30
 #define HAVE_SIGNAL 				1
@@ -147,7 +159,6 @@ void slaveClockFucnsInit(void);
 void slaveClockRun(void);
 void SNTP_init(void);		
 int8_t SNTP_run(void);	
-int8_t SNTP_run2(void);
 
 void RTC_Update(void);
 //define for DS3231
