@@ -268,7 +268,7 @@ typedef struct
   __IO uint32_t PSR;          /*!< FDCAN Protocol Status register,                                  Address offset: 0x044 */
   __IO uint32_t TDCR;         /*!< FDCAN Transmitter Delay Compensation register,                   Address offset: 0x048 */
        uint32_t RESERVED3;    /*!< Reserved,                                                                        0x04C */
-//  __IO uint32_t IR;           /*!< FDCAN Interrupt register,                                        Address offset: 0x050 */
+  __IO uint32_t IR;           /*!< FDCAN Interrupt register,                                        Address offset: 0x050 */
   __IO uint32_t IE;           /*!< FDCAN Interrupt Enable register,                                 Address offset: 0x054 */
   __IO uint32_t ILS;          /*!< FDCAN Interrupt Line Select register,                            Address offset: 0x058 */
   __IO uint32_t ILE;          /*!< FDCAN Interrupt Line Enable register,                            Address offset: 0x05C */
