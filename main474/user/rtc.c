@@ -12,16 +12,16 @@ unsigned char i2c_rv[19];
 
 extern I2C_HandleTypeDef hi2c2;
 
-void UpdateRtcTime(void)
+void UpdateRtcTime(uint8_t ho,uint8_t min,uint8_t sec,uint8_t da,uint8_t mon,uint8_t yea)
 {
 	ghids(14,0);//1HZ out SQW
-  ghids(DS_SECOND_REG,seconds);
-  ghids(DS_MIN_REG,minutes);
-  ghids(DS_HOUR_REG,hours);
+  ghids(DS_SECOND_REG,sec);
+  ghids(DS_MIN_REG,min);
+  ghids(DS_HOUR_REG,ho);
 				
-  ghids(DS_DATE_REG,days);
-  ghids(DS_MONTH_REG,months);
-  ghids(DS_YEAR_REG,years);
+  ghids(DS_DATE_REG,da);
+  ghids(DS_MONTH_REG,mon);
+  ghids(DS_YEAR_REG,yea);
 }
 //------------------------------------------------------
 void BCD_Decoder(void)

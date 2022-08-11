@@ -4,7 +4,7 @@
 
 #define	GPS1_USART	&huart1
 #define	GPS2_USART	&huart2
-#define	GPSBUFSIZE 255
+#define	GPSBUFSIZE 139
 
 extern char gps1_time[7];
 extern char gps2_time[7];

@@ -83,6 +83,9 @@ typedef struct{
 #define MAIN_PPS_GPIO_Port GPIOC
 #define LED_Pin GPIO_PIN_0
 #define LED_GPIO_Port GPIOA
+#define RTC_Pin GPIO_PIN_1
+#define RTC_GPIO_Port GPIOA
+#define RTC_EXTI_IRQn EXTI1_IRQn
 #define LCD_RS_Pin GPIO_PIN_0
 #define LCD_RS_GPIO_Port GPIOB
 #define LCD_RW_Pin GPIO_PIN_1
@@ -103,19 +106,25 @@ typedef struct{
 #define GPS1PPS_Pin GPIO_PIN_11
 #define GPS1PPS_GPIO_Port GPIOA
 #define GPS1PPS_EXTI_IRQn EXTI15_10_IRQn
-#define LED_GPS2_Pin GPIO_PIN_10
+//#define LED_GPS2_Pin GPIO_PIN_10
+//#define LED_GPS2_GPIO_Port GPIOC
+//#define LED_GPS1_Pin GPIO_PIN_11
+//#define LED_GPS1_GPIO_Port GPIOC
+//#define LED_CPU_Pin GPIO_PIN_12
+//#define LED_CPU_GPIO_Port GPIOC
+/* USER CODE BEGIN Private defines */
+#define LED_GPS2_Pin GPIO_PIN_12
 #define LED_GPS2_GPIO_Port GPIOC
 #define LED_GPS1_Pin GPIO_PIN_11
 #define LED_GPS1_GPIO_Port GPIOC
-#define LED_CPU_Pin GPIO_PIN_12
+#define LED_CPU_Pin GPIO_PIN_10
 #define LED_CPU_GPIO_Port GPIOC
-/* USER CODE BEGIN Private defines */
 extern uint8_t days,months,years,hours,minutes,seconds ;
 void MX_ADC2_Init_MOD(void);
 void scan_ADC(void);
 
 void UpdateLed(void);
-void DisplayRTC_Time(void);
+//void DisplayRTC_Time(void);
 void Display_Time(void);
 void checkUART(void);
 void main_init(void);

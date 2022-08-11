@@ -13,7 +13,7 @@
 #define DS_MONTH_REG 	5
 #define DS_YEAR_REG 	6
 
-void UpdateRtcTime(void);
+void UpdateRtcTime(uint8_t ho,uint8_t min,uint8_t sec,uint8_t da,uint8_t mon,uint8_t yea);
 void BCD_Decoder(void);
 void laythoigian(void);
 void ghids(unsigned char add, unsigned char dat);

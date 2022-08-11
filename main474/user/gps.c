@@ -93,30 +93,34 @@ void GPS_UART_CallBack(void){
 			{
 				//tgps1 = TIM3->CNT;
 				//$GNRMC,031653.00,A,2102.50750,N,10552.87004,E,0.050,,190422,,,A*6B
-				gps1_time[0] = rx1_buffer[7];
-				gps1_time[1] = rx1_buffer[8];
-				gps1_time[2] = rx1_buffer[9];
-				gps1_time[3] = rx1_buffer[10];
-				gps1_time[4] = rx1_buffer[11];
-				gps1_time[5] = rx1_buffer[12]; 
-				gps1_valid[0] = rx1_buffer[17];
-				//printf("Time 1 %s\n",gps1_time);
+				//if((rx1_buffer[17] == 'V')||(rx1_buffer[17] == 'A'))
+				//{
+					gps1_time[0] = rx1_buffer[7];
+					gps1_time[1] = rx1_buffer[8];
+					gps1_time[2] = rx1_buffer[9];
+					gps1_time[3] = rx1_buffer[10];
+					gps1_time[4] = rx1_buffer[11];
+					gps1_time[5] = rx1_buffer[12]; 
+					gps1_valid[0] = rx1_buffer[17];
+					//printf("Time 1 %s\n",gps1_time);
+					
+					//Dem 9 so ',' de tim ngay thang nam
+					i = 0;j=0;
+					while((i<9) && (j<100))
+					{
+						if(rx1_buffer[j++] == ',') i++;
+					}
+					if((i == 9) && (rx1_buffer[j+6] ==','))//9 dau ','
+					{
+						gps1_date[0] = rx1_buffer[j];
+						gps1_date[1] = rx1_buffer[j+1];
+						gps1_date[2] = rx1_buffer[j+2];
+						gps1_date[3] = rx1_buffer[j+3];
+						gps1_date[4] = rx1_buffer[j+4];
+						gps1_date[5] = rx1_buffer[j+5];
+					}	
+				//}
 				
-				//Dem 9 so ',' de tim ngay thang nam
-				i = 0;j=0;
-				while((i<9) && (j<100))
-				{
-					if(rx1_buffer[j++] == ',') i++;
-				}
-				if((i == 9) && (rx1_buffer[j+6] ==','))//9 dau ','
-				{
-					gps1_date[0] = rx1_buffer[j];
-					gps1_date[1] = rx1_buffer[j+1];
-					gps1_date[2] = rx1_buffer[j+2];
-					gps1_date[3] = rx1_buffer[j+3];
-					gps1_date[4] = rx1_buffer[j+4];
-					gps1_date[5] = rx1_buffer[j+5];
-				}
 				
 			}
 			if((rx1_buffer[0] == '$')&&(rx1_buffer[3] == 'G')&&(rx1_buffer[4] == 'G')&&(rx1_buffer[5] == 'A'))
@@ -168,29 +172,31 @@ void GPS2_UART_CallBack(void)
 				//GPS2_parse((char*) rx2_buffer);
 				if((rx2_buffer[0] == '$')&&(rx2_buffer[3] == 'R')&&(rx2_buffer[4] == 'M')&&(rx2_buffer[5] == 'C'))
 				{
-					//tgps2 = TIM3->CNT;
-					gps2_time[0] = rx2_buffer[7];
-					gps2_time[1] = rx2_buffer[8];
-					gps2_time[2] = rx2_buffer[9];
-					gps2_time[3] = rx2_buffer[10];
-					gps2_time[4] = rx2_buffer[11];
-					gps2_time[5] = rx2_buffer[12];
-					gps2_valid[0] = rx2_buffer[17];
-					//Dem 9 so ',' de tim ngay thang nam
-					i = 0;j=0;
-					while((i<9) && (j<100))
-					{
-						if(rx2_buffer[j++] == ',') i++;
-					}
-					if((i == 9) && (rx2_buffer[j+6] ==','))//9 dau ','
-					{
-						gps2_date[0] = rx2_buffer[j];
-						gps2_date[1] = rx2_buffer[j+1];
-						gps2_date[2] = rx2_buffer[j+2];
-						gps2_date[3] = rx2_buffer[j+3];
-						gps2_date[4] = rx2_buffer[j+4];
-						gps2_date[5] = rx2_buffer[j+5];
-					}
+					//if((rx1_buffer[17] == 'V')||(rx1_buffer[17] == 'A'))
+						//{
+							gps2_time[0] = rx2_buffer[7];
+							gps2_time[1] = rx2_buffer[8];
+							gps2_time[2] = rx2_buffer[9];
+							gps2_time[3] = rx2_buffer[10];
+							gps2_time[4] = rx2_buffer[11];
+							gps2_time[5] = rx2_buffer[12];
+							gps2_valid[0] = rx2_buffer[17];
+							//Dem 9 so ',' de tim ngay thang nam
+							i = 0;j=0;
+							while((i<9) && (j<100))
+							{
+								if(rx2_buffer[j++] == ',') i++;
+							}
+							if((i == 9) && (rx2_buffer[j+6] ==','))//9 dau ','
+							{
+								gps2_date[0] = rx2_buffer[j];
+								gps2_date[1] = rx2_buffer[j+1];
+								gps2_date[2] = rx2_buffer[j+2];
+								gps2_date[3] = rx2_buffer[j+3];
+								gps2_date[4] = rx2_buffer[j+4];
+								gps2_date[5] = rx2_buffer[j+5];
+							}
+						//}
 				}
 			}
 			if((rx2_buffer[0] == '$')&&(rx2_buffer[3] == 'G')&&(rx2_buffer[4] == 'G')&&(rx2_buffer[5] == 'A'))

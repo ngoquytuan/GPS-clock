@@ -5,7 +5,7 @@
 #include "rtc.h"
 #include "lcd.h"
 
-extern ADC_HandleTypeDef hadc1;
+
 extern ADC_HandleTypeDef hadc2;
 extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim20;
@@ -27,28 +27,39 @@ main_sst main_status;
 
 uint8_t TimeMessage[20];
 uint8_t Rx3Buffer[RX3BUFFERSIZE];
-uint32_t u1_halt,u2_halt;
+//uint32_t u1_halt,u2_halt;
 uint32_t u3_halt = 0;
 uint8_t gps1_pps = 0;
 uint8_t gps2_pps = 0;
-#define PeriodSaveRTC 63
+uint8_t rtc_pps = 0;
+
+#define PeriodSaveRTC 93
 uint8_t TimeToSaveRTC = PeriodSaveRTC;
 
 uint8_t Flag_sweepLCD = 0;
 uint8_t Flag_send2conn = 0;
 
-volatile uint32_t t0=0,t1,t2,t3,t4=0,t5,tgps1,tgps2;
+
+#define GPS_Stable_counter 19
+uint8_t Flag_Have_PPS1 = 0;
+uint8_t Flag_Have_PPS2 = 0;
+
+uint8_t Flag5seconds = 0;
+
+#define NOGPS 0
+#define GPS1 1
+#define GPS2 2
+
+uint8_t mainGPSSignal = NOGPS;
+
+//volatile uint32_t t0=0,t1,t2,t3,t4=0,t5,tgps1,tgps2;
 /*
 //Lay thoi gian dua vao ban tin gui
 */
 void dateAndTime(char* timeStr,char* dateStr)
 {
-	hours   = 10*(timeStr[0] -'0') + timeStr[1] - '0';
-  minutes = 10*(timeStr[2] -'0') + timeStr[3] - '0';
-  seconds = 10*(timeStr[4] -'0') + timeStr[5] - '0';
-	days   = 10*(dateStr[0] -'0') + dateStr[1] - '0';
-  months = 10*(dateStr[2] -'0') + dateStr[3] - '0';
-  years  = 10*(dateStr[4] -'0') + dateStr[5] - '0';
+
+	laythoigian();
 	
 	TimeMessage[4] = timeStr[0];
 	TimeMessage[5] = timeStr[1];
@@ -96,11 +107,14 @@ void oneSecondCount(void)
 	u3_halt++;
 	if(TimeToSaveRTC > 1) TimeToSaveRTC--;
 	
+	//Truong hop nay mat xung tu RTC -> MCU : het pin
 	//Neu chua gui ban tin cho mach giao tiep => gui
 	if(Flag_send2conn == 0)
 	{
+		dateAndTimeRTC();
 		//Gui thoi gian den mach giao tiep
 		HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+		//printf("No RTC");
 	}
 	else Flag_send2conn = 0;
 	
@@ -109,76 +123,159 @@ void oneSecondCount(void)
 	{
 		//dateAndTime(gps1_time,gps1_date);
 		Display_Time();
+		//printf("No GPS");
 	}
 	else Flag_sweepLCD = 0;
 	
 	scan_ADC();
 	UpdateLed();
+
+	if((Flag_Have_PPS1 > GPS_Stable_counter)&&(numSat1 >= numSat2))
+	{
+		mainGPSSignal = GPS1;
+	}
+	else if((Flag_Have_PPS2 > GPS_Stable_counter)&&(numSat2 > numSat1))
+	{
+		mainGPSSignal = GPS2;
+	}
+	else mainGPSSignal = NOGPS;
+	
+	
+	//Tin hieu PPS da on dinh
+	if(Flag_Have_PPS1 >100) 
+	{
+		if(numSat1 < 4) Flag_Have_PPS1 = 0;//dang chay ngon mat anten
+		else Flag_Have_PPS1 =100;
+	}
+	if(Flag_Have_PPS2 >100)
+	{
+		if(numSat2 < 4) Flag_Have_PPS2 = 0;//dang chay ngon mat anten
+		else Flag_Have_PPS2 =100;
+	}
+	
+	Flag5seconds++;
+	if(Flag5seconds%5 == 0) //5s moi lan
+	{
+		LCD_Gotoxy(1,21);
+		lcdprintf("Sat1:%02d Sat2:%02d %01d  ",numSat1,numSat2,mainGPSSignal);
+	}	
 	
 	//printf("t0: %d,t0-t4: %d,t1-t4: %d,t2-t0: %d,t3:%d g1 %d g2 %d \r\n",t0,t0-t4,t1-t4,t2-t0,t3,tgps1-t4,tgps2-t0);
 	//printf("gps %d\r\n",tgps1);
-	printf(" Sat1:%d Sat2:%d",numSat1,numSat2);
+	//printf("#S1:%02dS2:%02dU%d\r\n",numSat1,numSat2,mainGPSSignal);
 }
+
 /*
-Gui ban tin sang mach giao tiep va hien thi thong tin tren LCD
 Save info to RTC
 */
-void SendAnhDisplay(void)
+void SaveGPStoRTC(void)
 {
-	if(Flag_send2conn == 0)
-	{
-		//dateAndTime(gps1_time,gps1_date);
-		dateAndTimeRTC();
-		//Gui thoi gian den mach giao tiep
-		HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
-		Flag_send2conn = 1;
-	}
-	//
+	uint8_t gio,phut,giay,ngay,thang,nam;
 	if(TimeToSaveRTC < 6)
 		{
-			//save time to rtc
-			TimeToSaveRTC = PeriodSaveRTC;
-			if(seconds <56)
+			if(seconds <56)//Sap sang phut moi, ko luu tranh loi
 			{
-				
-				dateAndTime(gps1_time,gps1_date);//????? khi nao theo gps 2
-				seconds++;	
-				UpdateRtcTime();
-				//printf("RTC save\r\n");
+				gio  = 10*(TimeMessage[4] - '0') + TimeMessage[5]- '0' ;
+				phut = 10*(TimeMessage[6] - '0') + TimeMessage[7]- '0' ;
+				giay = 10*(TimeMessage[8] - '0') + TimeMessage[9]- '0' +1;
+	
+				ngay = 10*(TimeMessage[10] - '0')  + TimeMessage[11]- '0' ;
+				thang = 10*(TimeMessage[12] - '0') + TimeMessage[13]- '0' ;
+				nam = 10*(TimeMessage[14] - '0')   + TimeMessage[15]- '0' ;
+	
+				UpdateRtcTime(gio,phut,giay,ngay,thang,nam);
+				TimeToSaveRTC = PeriodSaveRTC;	//reset counter
+				//printf("Save RTC\r\n");
 			}
-			
 		}
-		
-	if(Flag_sweepLCD == 0)
-	{
-	  Display_Time();
-		Flag_sweepLCD = 1;
-	}
 }
 /*
 CHUONG TRINH CHINH
+1- Gui ban tin thoi gian sang mach giao tiep
+2- Hien thi LCD
+3- Luu gio RTC va hien thi IP
+
+1: Gui ban tin
+- Neu co GPS tot, gui ban tin theo gps tot
+- Neu GPS ko tot, gui ban tin theo RTC
 */
 void main_apps(void)
 {
-	if(gps1_pps == 1) 
+	HAL_GPIO_TogglePin(LED_CPU_GPIO_Port, LED_CPU_Pin);
+	
+	Flag_send2conn = 1;//Ko gui ban tin nua => debug
+	
+	if(mainGPSSignal == NOGPS)//Ko co GPS, gui ban tin theo RTC
 	{
-		//t1 = fractionOfSecond;
-		
-		gps1_pps = 0;
-		SendAnhDisplay();
-		
+		if(rtc_pps == 1)
+		{
+			rtc_pps = 0;
+			
+			if(Flag_send2conn != 1)
+			{
+				dateAndTimeRTC();
+				//Gui thoi gian den mach giao tiep
+				HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+			  Flag_send2conn = 1;//Co bao da gui ban tin 
+				//printf("--RTC\r\n");
+			}
+			
+			Display_Time();
+			Flag_sweepLCD = 1;//Co bao da sweep LCD
+			
+		}
 	}
-	
-	if(gps2_pps == 1) 
+	else if(mainGPSSignal == GPS1)//GPS1 tin hieu tot
 	{
-		//t2 = fractionOfSecond;
-		
-		gps2_pps = 0;
-		SendAnhDisplay();
+		if(gps1_pps == 1) 
+		{
+			gps1_pps = 0;
+			gps2_pps = 0;
+			if(Flag_send2conn != 1)
+			{
+				dateAndTime(gps1_time,gps1_date);
+				//Gui thoi gian den mach giao tiep
+				HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+				Flag_send2conn = 1;//Co bao da gui ban tin
+				//printf("--GPS1\r\n");				
+			}
+			
+			SaveGPStoRTC();
+			Display_Time();
+			Flag_sweepLCD = 1;//Co bao da sweep LCD
+			
+		}
 	}
-	
-	
+	else if(mainGPSSignal == GPS2)//GPS2 tin hieu tot
+	{
+		if(gps2_pps == 1) 
+		{
+			gps2_pps = 0;
+			gps1_pps = 0;
+			if(Flag_send2conn != 1)
+			{
+				dateAndTime(gps2_time,gps2_date);
+				//Gui thoi gian den mach giao tiep
+				HAL_UART_Transmit(&huart3, TimeMessage, 20, 100);
+				Flag_send2conn = 1;//Co bao da gui ban tin 
+				//printf("--GPS2\r\n");
+			}
+			SaveGPStoRTC();
+			Display_Time();
+			Flag_sweepLCD = 1;//Co bao da sweep LCD
+			
+		}
+	}
+
+	if(tim20ct > 1000) 
+	{
+		tim20ct = 0;
+		oneSecondCount();
+		HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_RESET);
+	}
 	checkUART();
+	//HAL_GPIO_WritePin(LED_CPU_GPIO_Port, LED_CPU_Pin, GPIO_PIN_RESET);
 }
 /**
 KHOI TAO
@@ -199,17 +296,12 @@ void main_init(void)
 			Error_Handler();
 		}
 	HAL_TIM_Base_Start_IT(&htim20);
-	HAL_TIM_Base_Start(&htim3);
+	//HAL_TIM_Base_Start(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	/* Run the ADC calibration in single-ended mode */
-  if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)
-  {
-    /* Calibration Error */
-    Error_Handler();
-  }
 	if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) != HAL_OK)
   {
     /* Calibration Error */
@@ -231,22 +323,7 @@ void main_init(void)
 	TimeMessage[1] = 'G';
 	TimeMessage[2] = 'P';
 	TimeMessage[3] = 'S';
-	TimeMessage[4] = '0';
-	TimeMessage[5] = '0';
-	TimeMessage[6] = '0';
-	TimeMessage[7] = '0';
-	TimeMessage[8] = '0';
-	TimeMessage[9] = '0';
-	TimeMessage[10] = '0';
-	TimeMessage[11] = '0';
-	TimeMessage[12] = '0';
-	TimeMessage[13] = '0';
-	TimeMessage[14] = '0';
-	TimeMessage[15] = '0';
-	TimeMessage[16] = '0';
-	TimeMessage[17] = '0';
-	TimeMessage[18] = '0';
-	TimeMessage[19] = '0';
+	dateAndTimeRTC();
 }
 
 /*
@@ -284,14 +361,14 @@ void checkUART(void)
 
 
 //==============================================
-void DisplayRTC_Time(void)
-{			
-		LCD_Gotoxy(0,26);
-		//LCD_Puts("RTC:");
-		//laythoigian();			
-		lcdprintf("%02d%02d%02d %02d%02d%02d",time[2],time[1],time[0],time[4],time[5],time[6]);
-		
-}
+//void DisplayRTC_Time(void)
+//{			
+//		LCD_Gotoxy(0,26);
+//		//LCD_Puts("RTC:");
+//		laythoigian();			
+//		lcdprintf("%02d%02d%02d %02d%02d%02d",hours,minutes,seconds,days,months,years);
+//		
+//}
 /*
 Hien thi cac thong tin tren LCD
 */
@@ -322,25 +399,26 @@ void Display_Time(void)
       
 			//LCD_Gotoxy(1,20);
 			//LCD_Putc(numSat2+'0');
-			
-			DisplayRTC_Time();
+			LCD_Gotoxy(0,26);
+			lcdprintf("%02d%02d%02d %02d%02d%02d",time[2],time[1],time[0],time[4],time[5],time[6]);
+			//DisplayRTC_Time();
 }
 //==============================================		
 void UpdateLed(void)	
 {
-	if (gps1_valid[0] == 'A')
-	{
-		HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_SET);
-	}
-	else
-		HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_RESET);
+//	if (gps1_valid[0] == 'A')
+//	{
+//		HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_SET);
+//	}
+//	else
+//		HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_RESET);
 
-	if (gps2_valid[0] == 'A')
-	{
-		HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_SET);
-	}
-	else
-		HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_RESET);
+//	if (gps2_valid[0] == 'A')
+//	{
+//		HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_SET);
+//	}
+//	else
+//		HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_RESET);
 	
 }
 
@@ -365,7 +443,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		//printf("GPS1PPS\r\n");
 		//main_status.gps_pps = 1;
 		//main_status.gps1_stt = 'A';
+		HAL_GPIO_WritePin(LED_GPS1_GPIO_Port, LED_GPS1_Pin, GPIO_PIN_SET);
 		gps1_pps = 1;
+		Flag_Have_PPS1++;
   }
 	if (GPIO_Pin == GPS2PPS_Pin)
   {
@@ -373,18 +453,27 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		//t0 = fractionOfSecond;
 		//HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
 		//printf("GPS2PPS\r\n");
+		HAL_GPIO_WritePin(LED_GPS2_GPIO_Port, LED_GPS2_Pin, GPIO_PIN_SET);
 		gps2_pps = 1;
+		Flag_Have_PPS2++;
   }
+	if (GPIO_Pin == RTC_Pin)
+  {
+		//printf("RTC_Pin\r\n");
+		rtc_pps = 1;
+	}
 }
-
+/*
+Scan ADC
+*/
 void scan_ADC(void)
 	{
 		uint32_t raw;
 		
-			HAL_ADC_Start(&hadc1);
-			HAL_ADC_PollForConversion(&hadc1, 100);
-			raw = HAL_ADC_GetValue(&hadc1);
-			HAL_ADC_Stop(&hadc1);
+//			HAL_ADC_Start(&hadc1);
+//			HAL_ADC_PollForConversion(&hadc1, 100);
+//			raw = HAL_ADC_GetValue(&hadc1);
+//			HAL_ADC_Stop(&hadc1);
 			// Convert to string and print
 			//printf("PA1-ADC1-IN2 :%d\r\n", raw);
 		//Tinh toan dien ap 12V
