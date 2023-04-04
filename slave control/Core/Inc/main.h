@@ -31,40 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#define DebugEnable
 
-//Chon 1 trong 3 loai
-//#define SLAVE_WALL
-#define SLAVE_CONSOLE
-//#define SLAVE_MATRIX
-
-#ifdef SLAVE_WALL
-	#ifdef SLAVE_CONSOLE
-	ERROR: Loi roi
-	#endif
-	#ifdef SLAVE_MATRIX
-	ERROR: Loi roi
-	#endif
-#endif
-#ifdef SLAVE_CONSOLE
-	#ifdef SLAVE_WALL
-	ERROR: Loi roi
-	#endif
-	#ifdef SLAVE_MATRIX
-	ERROR: Loi roi
-	#endif
-#endif
-
-
-#define ADDR_FLASH_PAGE_47    ((uint32_t)0x08017800) /* Base @ of Page 47, 2 Kbytes */
-#define ADDR_FLASH_PAGE_48    ((uint32_t)0x08018000) /* Base @ of Page 48, 2 Kbytes */
-#define ADDR_FLASH_PAGE_49    ((uint32_t)0x08018800) /* Base @ of Page 49, 2 Kbytes */
-#define ADDR_FLASH_PAGE_59    ((uint32_t)0x0801D800) /* Base @ of Page 59, 2 Kbytes */
-#define ADDR_FLASH_PAGE_60    ((uint32_t)0x0801E000) /* Base @ of Page 60, 2 Kbytes */
-#define ADDR_FLASH_PAGE_61    ((uint32_t)0x0801E800) /* Base @ of Page 61, 2 Kbytes */
-
-#define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_59   /* Start @ of user Flash area */
-#define FLASH_USER_END_ADDR     (ADDR_FLASH_PAGE_60 + FLASH_PAGE_SIZE - 1)   /* End @ of user Flash area */
 
 typedef struct {
 	uint8_t ip[4];
@@ -75,7 +42,7 @@ typedef struct {
 	uint32_t LED_intensity;
 	uint8_t ntp_ip[4];
 } dataSave;		
-#define myMem ((dataSave *) FLASH_USER_START_ADDR)
+
 
 /* Size of Reception buffer */
 #define RXBUFFERSIZE                      100
@@ -100,6 +67,12 @@ typedef struct {
 #define RTC_FINE 						2	
 #define RTC_OUT_OF_BATTERY 	1
 #define NO_RTC 							0
+
+#define SYNC_WiTH_RS485 							    0
+#define SYNC_WiTH_NTP_Server 							1
+
+#define NO_CONNECTION 							0
+#define CONNECTED 	     						1
 typedef struct{
 
   uint8_t work_mode;
@@ -109,19 +82,22 @@ typedef struct{
 	uint8_t rtc_status; 
 	uint8_t sync_status; 
 } slave_status;
-extern char ds3231_reg[7],nhietdo;
+
 extern slave_status slave_clock;
+
+extern char ds3231_reg[7],nhietdo;
 extern uint8_t days;
 extern uint8_t months;
 extern uint8_t years;
 extern uint8_t hours;
 extern uint8_t minutes;
 extern uint8_t seconds;
+extern uint8_t server_hour, server_minute, server_second,server_day, server_month,server_year ;
 extern uint8_t aRxBuffer[RXBUFFERSIZE];
 extern uint8_t LEDintensity;
 extern UART_HandleTypeDef huart2;
-extern uint32_t timct;
-
+extern uint32_t ms_couters;
+extern struct tm* timeinfo;
 
 void stm32g474flashEraseThenSave(void);
 void stm32g474_FactoryLoad(void);
@@ -129,28 +105,10 @@ void stm32g474_FactoryLoad(void);
 void w5500_lib_init(void);
 void checklink(void);
 void control(void);
+void resetUART(void);
+void resetInitLED(void);
 
-#ifdef SLAVE_MATRIX
-void up7_matrix_init (void);
-void load_line1(uint8_t dis_date,uint8_t dis_month,uint8_t dis_year);
-void scan_7up(void);
-void scan_5down(void);
-void load_line2(uint8_t dis_hour,uint8_t dis_min,uint8_t dis_sec,uint8_t dot);
-void line2_matrix_init (void);
-#endif
 
-#ifndef SLAVE_MATRIX
-void display_init_check(void);
-void console_blink(void);
-void console_display(void);
-void RTC_factory_RST(void);
-void chinhdosang(void);
-#ifdef SLAVE_WALL
-void MAX7219_Init2 (void);
-void MAX7219_SendAddrDat2 (unsigned char addr,unsigned char dat);
-void day_display(void);
-#endif
-#endif
 
 void chinhdosang(void);
 void update_display(void);
@@ -159,8 +117,7 @@ void slaveClockFucnsInit(void);
 void slaveClockRun(void);
 void SNTP_init(void);		
 int8_t SNTP_run(void);	
-int8_t SNTP_run2(void);
-void wzn_event_handle(void);
+//void wzn_event_handle(void);
 
 void RTC_Update(void);
 //define for DS3231

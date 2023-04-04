@@ -17,6 +17,6 @@ void UpdateRtcTime(uint8_t ho,uint8_t min,uint8_t sec,uint8_t da,uint8_t mon,uin
 void BCD_Decoder(void);
 void laythoigian(void);
 void ghids(unsigned char add, unsigned char dat);
-extern char time[7];
+extern char ds3231_reg[7];
 
 #endif

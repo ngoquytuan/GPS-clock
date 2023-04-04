@@ -5,7 +5,7 @@
 #include "wizchip_conf.h"
 extern UART_HandleTypeDef huart1;
 extern wiz_NetInfo myipWIZNETINFO;
-													 
+extern uint8_t IRIGB_GAIN;													 
  														 
 
 
@@ -153,7 +153,11 @@ void stm32g474flashEraseThenSave(void)
 			printf("Cant save GW & DNS\r\n");
 			#endif
     }
-		temp=DATA_64;
+		
+		temp = IRIGB_GAIN;
+		temp = temp <<32;
+		temp = temp + DATA_32;
+		
 		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_USER_START_ADDR+16, temp) == HAL_OK)
     {
 			#ifdef DebugEnable
@@ -200,6 +204,8 @@ void stm32g474_FactoryLoad(void)
 		#ifdef DebugEnable
 		printf("Mem ok, load and return\r\n");
 		#endif
+		IRIGB_GAIN 				 = myMem->irigGain;
+		
 		myipWIZNETINFO.ip[0] = myMem->ip[0];
 		myipWIZNETINFO.ip[1] = myMem->ip[1];
 		myipWIZNETINFO.ip[2] = myMem->ip[2];

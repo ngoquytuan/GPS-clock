@@ -1,12 +1,12 @@
 #ifndef	W5500_def
 #define	W5500_def
-//#include "stm32g4xx_hal.h"                  // Device header
+
 //////////////////////////////////////////////////////////////////////
 // SOCKET NUMBER DEFINION  ///////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 #define SOCK_UDPS        0
-//#define SOCK_DNS         1
-#define SOCK_SNTP        2
+#define SOCK_NTP2        1
+#define SOCK_NTP3        2
 #define SOCK_agent			 3
 #define SOCK_trap				 4
 #define SOCK_WEBSERVER   5

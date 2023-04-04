@@ -9,6 +9,8 @@
 #include <time.h>
 #include "httpServer.h"
 #include "irigb.h"
+#include "connector.h"
+#include "socketdefines.h"
 ///////////////////////////////////////////////////////////////////////
 // PHYStatus check ////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
@@ -24,6 +26,7 @@ volatile char date_buff1[7], date_buff2[7];
 unsigned char daysofmonth[12]={31,28,31,30,31,30,31,31,30,31,30,31};
 unsigned char daysofmonth2[12]={31,29,31,30,31,30,31,31,30,31,30,31};
 
+extern uint8_t IRIGB_GAIN;
 extern wiz_NetInfo myipWIZNETINFO;
 extern volatile uint16_t phystatus_check_cnt;
 extern SPI_HandleTypeDef hspi1;
@@ -40,13 +43,14 @@ extern time_t unixTime_last_sync;
 extern uint8_t serverPacket[];
 extern time_t micros_recv;
 extern time_t recvTime;
+extern int8_t sat1,sat2,satInuse;
 
 uint8_t phylink = PHY_LINK_OFF;
 uint8_t unlock_config =0;
 
 //for smnp
 // lost signal : if after timeOutLostSignal seconds without GPS master message => lost
-int8_t lostSignal = 0;
+int8_t lostSignal = LOST_GPS_MASTER;
 int8_t timeOutLostSignal = 30;
 uint8_t gps1_stt = 0;
 uint8_t gps2_stt = 0;
@@ -54,6 +58,9 @@ uint8_t power1_stt = 0;
 uint8_t power2_stt = 0;
 
 int8_t count_to_send_main=0;
+uint32_t count_reset_ntp_server = 0;
+uint32_t real_delay;
+
 void U1RS485Transmit(const uint8_t *data,uint16_t length)
 		{
 			HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
@@ -74,7 +81,38 @@ void uart1_processing(void)//RS485
 				memset(Rx1Buffer,0,RX1BUFFERSIZE); 
 			}
 }
+/**
+  * @brief EXTI line detection callbacks
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+	* Neu co GPS, se co xung PPS tai thoi diem bat dau moi giay
+  * If GPS avaiable, PPS pulse start at the start of a second
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  //Dong bo xung PPS voi mach main GPS, moi lan co xung la thoi diem bat dau cua giay
+	//sync the start of a second by pps signal
+	if (GPIO_Pin == PPS_Pin)
+  {
+		//HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
+		//printf("PPS main");
+		fractionOfSecond = 9;
+		//codecounter = 0;
+		//timenow++;
+		//real_delay = TIM3->CNT ;
+		//TIM3->CNT = 0;
+		//U1RS485Transmit("PPS main",10);
+		
+  }
+	if (GPIO_Pin == INTn_Pin)
+  {
+		//Nhan duoc ban tin NTP, xu ly thoi gian va phan hoi
+		//Receied NTP message, processing and respond
+		//printf("NTP\r\n");
+		INT_NTP();
+  }
 
+}
 //Kiem tra W5500, SPI co on ko, day mang co cam ko?
 uint8_t checkDaymang(void)
 {
@@ -103,12 +141,12 @@ void resetirigbcode(void)
 unsigned char i=0;
 	for (i=0;i<100;i++)
 	{
-		irigb_code[i]=0;
+		irigb_code[i] = IRIGB_bit0;
 	}
-	irigb_code[0]=2;irigb_code[9]=2;irigb_code[19]=2;irigb_code[29]=2;
-	irigb_code[39]=2;irigb_code[49]=2;irigb_code[59]=2;irigb_code[69]=2;
-	irigb_code[79]=2;irigb_code[89]=2;irigb_code[99]=2;
-	nodaycode=0;
+	irigb_code[0] = IRIGB_bitP;irigb_code[9] = IRIGB_bitP;irigb_code[19] = IRIGB_bitP;irigb_code[29]=IRIGB_bitP;
+	irigb_code[39]=IRIGB_bitP;irigb_code[49]=IRIGB_bitP;irigb_code[59]=IRIGB_bitP;irigb_code[69]=IRIGB_bitP;
+	irigb_code[79]=IRIGB_bitP;irigb_code[89]=IRIGB_bitP;irigb_code[99]=IRIGB_bitP;
+	
 	hourcode=0;
 	minutecode=0; 
 	secondcode=0; 
@@ -143,50 +181,139 @@ void build_irigB_code(void)
 						nodaycode+=daycode;
 								
 
-						if (secondcode>=40) {irigb_code[8]=1;secondcode-=40;}
-						if (secondcode>=20) {irigb_code[7]=1;secondcode-=20;}
-						if (secondcode>=10) {irigb_code[6]=1;secondcode-=10;}
-						if (secondcode>=8) {irigb_code[4]=1;secondcode-=8;}
-						if (secondcode>=4) {irigb_code[3]=1;secondcode-=4;}
-						if (secondcode>=2) {irigb_code[2]=1;secondcode-=2;}
-						if (secondcode>=1) {irigb_code[1]=1;}
+						if (secondcode>=40) 
+																{
+																	irigb_code[8]=IRIGB_bit1;
+																	secondcode-=40;
+																} 
+																else 
+																	irigb_code[8] = IRIGB_bit0;
+																
+						if (secondcode>=20) 
+																{
+																	irigb_code[7]=IRIGB_bit1;
+																	secondcode-=20;
+																}
+																else 
+																	irigb_code[7] = IRIGB_bit0;
+						if (secondcode>=10) 
+																{
+																	irigb_code[6]=IRIGB_bit1;
+																	secondcode-=10;
+																}
+																else 
+																	irigb_code[6] = IRIGB_bit0;
+						if (secondcode>=8) {irigb_code[4]=IRIGB_bit1;secondcode-=8;}
+						else 
+																irigb_code[4] = IRIGB_bit0;
+						if (secondcode>=4) {irigb_code[3]=IRIGB_bit1;secondcode-=4;}
+						else 
+																irigb_code[3] = IRIGB_bit0;
+						if (secondcode>=2) {irigb_code[2]=IRIGB_bit1;secondcode-=2;}
+						else 
+																irigb_code[2] = IRIGB_bit0;
+						if (secondcode>=1) {irigb_code[1]=IRIGB_bit1;}
+						else 
+																irigb_code[1] = IRIGB_bit0;
 
-						if (minutecode>=40) {irigb_code[17]=1;minutecode-=40;}
-						if (minutecode>=20) {irigb_code[16]=1;minutecode-=20;}
-						if (minutecode>=10) {irigb_code[15]=1;minutecode-=10;}
-						if (minutecode>=8) {irigb_code[13]=1;minutecode-=8;}
-						if (minutecode>=4) {irigb_code[12]=1;minutecode-=4;}
-						if (minutecode>=2) {irigb_code[11]=1;minutecode-=2;}
-						if (minutecode>=1) {irigb_code[10]=1;}
+						if (minutecode>=40) {irigb_code[17]=IRIGB_bit1;minutecode-=40;}
+						else 
+																irigb_code[17] = IRIGB_bit0;
+						if (minutecode>=20) {irigb_code[16]=IRIGB_bit1;minutecode-=20;}
+						else 
+																irigb_code[16] = IRIGB_bit0;
+						if (minutecode>=10) {irigb_code[15]=IRIGB_bit1;minutecode-=10;}
+						else 
+																irigb_code[15] = IRIGB_bit0;
+						if (minutecode>=8) {irigb_code[13]=IRIGB_bit1;minutecode-=8;}
+						else 
+																irigb_code[13] = IRIGB_bit0;
+						if (minutecode>=4) {irigb_code[12]=IRIGB_bit1;minutecode-=4;}
+						else 
+																irigb_code[12] = IRIGB_bit0;
+						if (minutecode>=2) {irigb_code[11]=IRIGB_bit1;minutecode-=2;}
+						else 
+																irigb_code[11] = IRIGB_bit0;
+						if (minutecode>=1) {irigb_code[10]=IRIGB_bit1;}
+						else 
+																irigb_code[10] = IRIGB_bit0;
 
-						if (hourcode>=20) {irigb_code[26]=1;hourcode-=20;}
-						if (hourcode>=10) {irigb_code[25]=1;hourcode-=10;}
-						if (hourcode>=8) {irigb_code[23]=1;hourcode-=8;}
-						if (hourcode>=4) {irigb_code[22]=1;hourcode-=4;}
-						if (hourcode>=2) {irigb_code[21]=1;hourcode-=2;}
-						if (hourcode>=1) {irigb_code[20]=1;}
+						if (hourcode>=20) {irigb_code[26]=IRIGB_bit1;hourcode-=20;}
+						else 
+															 irigb_code[26] = IRIGB_bit0;
+						if (hourcode>=10) {irigb_code[25]=IRIGB_bit1;hourcode-=10;}
+						else 
+															 irigb_code[25] = IRIGB_bit0;
+						if (hourcode>=8) {irigb_code[23]=IRIGB_bit1;hourcode-=8;}
+						else 
+														  irigb_code[23] = IRIGB_bit0;
+						if (hourcode>=4) {irigb_code[22]=IRIGB_bit1;hourcode-=4;}
+						else 
+														  irigb_code[22] = IRIGB_bit0;
+						if (hourcode>=2) {irigb_code[21]=IRIGB_bit1;hourcode-=2;}
+						else 
+														  irigb_code[21] = IRIGB_bit0;
+						if (hourcode>=1) {irigb_code[20]=IRIGB_bit1;}
+						else 
+														  irigb_code[20] = IRIGB_bit0;
 
 					
-						if (yearcode>=80) {irigb_code[58]=1;yearcode-=80;}
-						if (yearcode>=40) {irigb_code[57]=1;yearcode-=40;}
-						if (yearcode>=20) {irigb_code[56]=1;yearcode-=20;}
-						if (yearcode>=10) {irigb_code[55]=1;yearcode-=10;}
-						if (yearcode>=8) {irigb_code[53]=1;yearcode-=8;}
-						if (yearcode>=4) {irigb_code[52]=1;yearcode-=4;}
-						if (yearcode>=2) {irigb_code[51]=1;yearcode-=2;}
-						if (yearcode>=1) {irigb_code[50]=1;}
+						if (yearcode>=80) {irigb_code[58]=IRIGB_bit1;yearcode-=80;}
+						else 
+														   irigb_code[58] = IRIGB_bit0;
+						if (yearcode>=40) {irigb_code[57]=IRIGB_bit1;yearcode-=40;}
+						else 
+														   irigb_code[57] = IRIGB_bit0;
+						if (yearcode>=20) {irigb_code[56]=IRIGB_bit1;yearcode-=20;}
+						else 
+														   irigb_code[56] = IRIGB_bit0;
+						if (yearcode>=10) {irigb_code[55]=IRIGB_bit1;yearcode-=10;}
+						else 
+														   irigb_code[55] = IRIGB_bit0;
+						if (yearcode>=8) {irigb_code[53]=IRIGB_bit1;yearcode-=8;}
+						else 
+														  irigb_code[53] = IRIGB_bit0;
+						if (yearcode>=4) {irigb_code[52]=IRIGB_bit1;yearcode-=4;}
+						else 
+														  irigb_code[52] = IRIGB_bit0;
+						if (yearcode>=2) {irigb_code[51]=IRIGB_bit1;yearcode-=2;}
+						else 
+														  irigb_code[51] = IRIGB_bit0;
+						if (yearcode>=1) {irigb_code[50]=IRIGB_bit1;}
+						else 
+														  irigb_code[50] = IRIGB_bit0;
 					
 
-						if (nodaycode>=200) {irigb_code[41]=1;nodaycode-=200;}
-						if (nodaycode>=100) {irigb_code[40]=1;nodaycode-=100;}
-						if (nodaycode>=80) {irigb_code[38]=1;nodaycode-=80;}
-						if (nodaycode>=40) {irigb_code[37]=1;nodaycode-=40;}
-						if (nodaycode>=20) {irigb_code[36]=1;nodaycode-=20;}
-						if (nodaycode>=10) {irigb_code[35]=1;nodaycode-=10;}
-						if (nodaycode>=8) {irigb_code[33]=1;nodaycode-=8;}
-						if (nodaycode>=4) {irigb_code[32]=1;nodaycode-=4;}
-						if (nodaycode>=2) {irigb_code[31]=1;nodaycode-=2;}
-						if (nodaycode>=1) {irigb_code[30]=1;}
+						if (nodaycode>=200) {irigb_code[41]=IRIGB_bit1;nodaycode-=200;}
+						else 
+														     irigb_code[41] = IRIGB_bit0;
+						if (nodaycode>=100) {irigb_code[40]=IRIGB_bit1;nodaycode-=100;}
+						else 
+														     irigb_code[40] = IRIGB_bit0;
+						if (nodaycode>=80) {irigb_code[38]=IRIGB_bit1;nodaycode-=80;}
+						else 
+														    irigb_code[38] = IRIGB_bit0;
+						if (nodaycode>=40) {irigb_code[37]=IRIGB_bit1;nodaycode-=40;}
+						else 
+														    irigb_code[37] = IRIGB_bit0;
+						if (nodaycode>=20) {irigb_code[36]=IRIGB_bit1;nodaycode-=20;}
+						else 
+														    irigb_code[36] = IRIGB_bit0;
+						if (nodaycode>=10) {irigb_code[35]=IRIGB_bit1;nodaycode-=10;}
+						else 
+														    irigb_code[35] = IRIGB_bit0;
+						if (nodaycode>=8) {irigb_code[33]=IRIGB_bit1;nodaycode-=8;}
+						else 
+														   irigb_code[33] = IRIGB_bit0;
+						if (nodaycode>=4) {irigb_code[32]=IRIGB_bit1;nodaycode-=4;}
+						else 
+														   irigb_code[32] = IRIGB_bit0;
+						if (nodaycode>=2) {irigb_code[31]=IRIGB_bit1;nodaycode-=2;}
+						else 
+														   irigb_code[31] = IRIGB_bit0;
+						if (nodaycode>=1) {irigb_code[30]=IRIGB_bit1;}
+						else 
+														   irigb_code[30] = IRIGB_bit0;
 #ifdef irigb_debug						
 						printf("IRIGB-code:\r\n");
 						for(n = 0; n<100; n++)
@@ -208,6 +335,10 @@ void main_message_handle(void)
 {//=> Ban tin GPS: $GPS034007060819AA10	;$$GPS091259280422AA10
 	if((aRxBuffer[0] =='$')&((aRxBuffer[1] =='G')|(aRxBuffer[1] =='g'))&((aRxBuffer[2] =='P')|(aRxBuffer[2] =='p'))&((aRxBuffer[3] =='S')|(aRxBuffer[3] =='s')))
 	{
+		//real_delay = TIM3->CNT;
+		//TIM3->CNT = 0;
+		//Vao den day thi it nhat da qua 63ms ???
+		//fractionOfSecond = 639;
 		//Truyen ban tin cho cac dong ho slave
 		HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
 		HAL_UART_Transmit(&huart1, aRxBuffer, 20, 100);
@@ -235,7 +366,7 @@ void main_message_handle(void)
 		currtime.tm_hour = hours;//10*convert_atoi(aRxBuffer[4])+convert_atoi(aRxBuffer[5]);
 		
 		timenow = mktime(&currtime);
-		//timenow = timenow - 25200;//Tru di 7 tieng
+
 		timeOutLostSignal = 30;//seconds 
 		lostSignal = GPS_MASTER_OK;
 		
@@ -259,6 +390,21 @@ void main_message_handle(void)
 		else power1_stt = 0;
 		if(aRxBuffer[19]=='1') power2_stt = 1;
 		else power2_stt = 0;
+		
+		if((gps1_stt == 0) && (gps2_stt == 0)) serverPacket[1] = 2; // Tin hieu GPS chua on dinh
+		else serverPacket[1] = 1; // Stratum, or type of clock
+	}
+	//#S1:01S2:02U2
+	if((aRxBuffer[20] =='#')&&(aRxBuffer[21] =='S')&&(aRxBuffer[22] =='1')&&(aRxBuffer[26] =='S')&&(aRxBuffer[31] =='U'))
+	{
+		//HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
+		//HAL_UART_Transmit(&huart1, (uint8_t *)aRxBuffer, 40, 100);
+		//HAL_UART_Transmit(&huart1, (uint8_t *)"OK", 3, 100);
+		//HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
+		//int8_t sat1,sat2,satInuse;
+		sat1 = 10*(aRxBuffer[24]-'0')+aRxBuffer[25]-'0';
+		sat2 = 10*(aRxBuffer[29]-'0')+aRxBuffer[30]-'0';
+		satInuse = aRxBuffer[32]-'0';
 	}
 }
 
@@ -268,8 +414,12 @@ void uart_check(void)
 	if(u2Timeout == 1) 
 			{
 				u2Timeout = 0;
-				main_message_handle();
 				
+				
+				//HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
+				//HAL_UART_Transmit(&huart1, (uint8_t *)aRxBuffer, 40, 100);
+				//HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
+				main_message_handle();
 				//printf("aRxBuffer %s; \r\n",aRxBuffer);
 				huart2.pRxBuffPtr = (uint8_t *)aRxBuffer;
 				huart2.RxXferCount = RXBUFFERSIZE;
@@ -293,10 +443,17 @@ void machGiaoTiep(void)
 		
 		
 		
-		if(timct > 1000) {
+		if(timct > 999) {
 			timct = 0;
-			timenow++;
 			count_to_send_main++;
+			count_reset_ntp_server++;
+			if(count_reset_ntp_server > 369)
+			{
+				reInitNTP(SOCK_UDPS);
+				count_reset_ntp_server = 0;
+			}
+			if(timeOutLostSignal> 0) timeOutLostSignal--;
+			if(timeOutLostSignal == 1) lostSignal = LOST_GPS_MASTER;
 		}
 		
 		//sau bao lau thi gui thong tin cho mach main?
@@ -304,12 +461,15 @@ void machGiaoTiep(void)
 		{
 			count_to_send_main = 0;
 			printf("IP :%d.%d.%d.%d",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+			
 		}
 		
 		if(phylink != PHY_LINK_ON) return;// ko cam day mang thi ko lam gi het!!!
 		
 	  //NTP server 
-		NTPUDP();
+		NTPUDP(SOCK_UDPS);
+		//NTPUDP(SOCK_NTP2);
+		//NTPUDP(SOCK_NTP3);
 			{	//SNMPv1 run
 				//Run SNMP Agent Fucntion
 				/* SNMP Agent Handler */

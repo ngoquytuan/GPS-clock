@@ -7,6 +7,8 @@
 #include "gps.h"
 #include "stm32g4xx_hal.h"
 
+uint8_t gps1_newdata = 0;
+uint8_t gps2_newdata = 0;
 
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -32,8 +34,8 @@ char gps2_date[7];
 char sat1_num[3];
 char sat2_num[3];
 //Number of satellites used
-uint8_t numSat1=0;
-uint8_t numSat2=0;
+uint8_t numSat1 = 0;
+uint8_t numSat2 = 0;
 //khi nao buffer full thi no se goi ham nay
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {  
@@ -91,10 +93,9 @@ void GPS_UART_CallBack(void){
 			//GPS1_parse((char*) rx1_buffer);
 			if((rx1_buffer[0] == '$')&&(rx1_buffer[3] == 'R')&&(rx1_buffer[4] == 'M')&&(rx1_buffer[5] == 'C'))
 			{
-				//tgps1 = TIM3->CNT;
 				//$GNRMC,031653.00,A,2102.50750,N,10552.87004,E,0.050,,190422,,,A*6B
-				//if((rx1_buffer[17] == 'V')||(rx1_buffer[17] == 'A'))
-				//{
+				if((rx1_buffer[17] == 'V')||(rx1_buffer[17] == 'A'))
+				{
 					gps1_time[0] = rx1_buffer[7];
 					gps1_time[1] = rx1_buffer[8];
 					gps1_time[2] = rx1_buffer[9];
@@ -103,7 +104,7 @@ void GPS_UART_CallBack(void){
 					gps1_time[5] = rx1_buffer[12]; 
 					gps1_valid[0] = rx1_buffer[17];
 					//printf("Time 1 %s\n",gps1_time);
-					
+					gps1_newdata = 1;
 					//Dem 9 so ',' de tim ngay thang nam
 					i = 0;j=0;
 					while((i<9) && (j<100))
@@ -119,7 +120,7 @@ void GPS_UART_CallBack(void){
 						gps1_date[4] = rx1_buffer[j+4];
 						gps1_date[5] = rx1_buffer[j+5];
 					}	
-				//}
+				}
 				
 				
 			}
@@ -172,8 +173,8 @@ void GPS2_UART_CallBack(void)
 				//GPS2_parse((char*) rx2_buffer);
 				if((rx2_buffer[0] == '$')&&(rx2_buffer[3] == 'R')&&(rx2_buffer[4] == 'M')&&(rx2_buffer[5] == 'C'))
 				{
-					//if((rx1_buffer[17] == 'V')||(rx1_buffer[17] == 'A'))
-						//{
+					if((rx2_buffer[17] == 'V')||(rx2_buffer[17] == 'A'))
+						{
 							gps2_time[0] = rx2_buffer[7];
 							gps2_time[1] = rx2_buffer[8];
 							gps2_time[2] = rx2_buffer[9];
@@ -181,6 +182,7 @@ void GPS2_UART_CallBack(void)
 							gps2_time[4] = rx2_buffer[11];
 							gps2_time[5] = rx2_buffer[12];
 							gps2_valid[0] = rx2_buffer[17];
+							gps2_newdata = 1;
 							//Dem 9 so ',' de tim ngay thang nam
 							i = 0;j=0;
 							while((i<9) && (j<100))
@@ -196,7 +198,7 @@ void GPS2_UART_CallBack(void)
 								gps2_date[4] = rx2_buffer[j+4];
 								gps2_date[5] = rx2_buffer[j+5];
 							}
-						//}
+						}
 				}
 			}
 			if((rx2_buffer[0] == '$')&&(rx2_buffer[3] == 'G')&&(rx2_buffer[4] == 'G')&&(rx2_buffer[5] == 'A'))

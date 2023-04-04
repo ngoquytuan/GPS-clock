@@ -31,12 +31,16 @@
 
 #include "httpServer.h"
 #include "snmp.h"
-
+#include "connector.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define fractionOfSecond TIM4->CNT
+
+const time_t built_time = 1669778893;
+time_t timenow;
+struct tm* timeinfo;
+extern uint32_t real_delay;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -45,22 +49,36 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+uint8_t IRIGB_GAIN;
+uint32_t _Bit0_real[1280];
+uint32_t _BitREF_real[1280];
+uint32_t _Bit1_real[1280];
 extern unsigned char irigb_code[];
 extern uint32_t _Bit0[];
 extern uint32_t _Bit1[];
 extern uint32_t _BitREF[];
 extern int8_t codecounter;
 /* end of irigb variables -------------------------------------------------------------*/
-
+void irigb_init(void)
+{
+	//1280
+	uint32_t i;
+	if(IRIGB_GAIN > 10) IRIGB_GAIN = 10;
+	if(IRIGB_GAIN < 1) IRIGB_GAIN = 1;
+	
+	for(i =0; i<1280; i++)
+	{
+		_Bit0_real[i] = (_Bit0[i]*IRIGB_GAIN)/10;
+		_Bit1_real[i] = (_Bit1[i]*IRIGB_GAIN)/10;
+		_BitREF_real[i] = (_BitREF[i]*IRIGB_GAIN)/10;
+	}
+}
 extern time_t unixTime_last_sync;
 
 
-time_t built_time,timenow = 1657166407;
-
-struct tm* timeinfo;
 
 uint32_t	_loop1=0;
-wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC,0x55, 0x00, 0x01},
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC,0x55, 0x01, 0x01},
 															 .ip = {192, 168,1, 39},
 															 .sn = {255,255,255,0},
 															 .gw = {0, 0, 0, 0},
@@ -90,6 +108,8 @@ uint8_t Rx1Buffer[RX1BUFFERSIZE];
 DAC_HandleTypeDef hdac1;
 DMA_HandleTypeDef hdma_dac1_ch1;
 
+IWDG_HandleTypeDef hiwdg;
+
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim2;
@@ -114,6 +134,7 @@ static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -170,12 +191,13 @@ int main(void)
   MX_TIM4_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
-  printf("This code gen by STMcube; STM32G474RBT6@160MHz\r\n");
-	built_time = timenow;
+  //printf("This code gen by STMcube; STM32G474RBT6@160MHz\r\n");
+	timenow = built_time ;
 	stm32g474_FactoryLoad();
 	
-	
+	irigb_init();
 	
 //	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_SET);
 //	HAL_UART_Transmit(&huart1, (uint8_t *)"UART1 TX ok\r\n", 13, 100);
@@ -183,12 +205,9 @@ int main(void)
 //	HAL_UART_Transmit(&huart1, (uint8_t *)msg, 20, 100);
 //	HAL_GPIO_WritePin(TimeRD_GPIO_Port, TimeRD_Pin, GPIO_PIN_RESET);
 	
-	HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
-	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_Bit0, 1280, DAC_ALIGN_12B_R);
 	
-	HAL_TIM_Base_Start(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
-	HAL_TIM_Base_Start(&htim4);
+	HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -202,11 +221,12 @@ int main(void)
 	
 	//printf("HH-MM-SS :%d-%d-%d\r\n",timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec);
 	//printf("DD-MM-YY :%d-%d-%d\r\n",timeinfo->tm_mday,1+timeinfo->tm_mon,timeinfo->tm_year-100);
+	resetirigbcode();
 	codecounter = 0;		
-	days = timeinfo->tm_mday;
-  months = 1+timeinfo->tm_mon;
-  years = timeinfo->tm_year-100;
-  hours = timeinfo->tm_hour;
+	days 		= timeinfo->tm_mday;
+  months 	= timeinfo->tm_mon +1;
+  years 	= timeinfo->tm_year-100;
+  hours 	= timeinfo->tm_hour;
   minutes = timeinfo->tm_min;
   seconds = timeinfo->tm_sec;
 
@@ -219,7 +239,7 @@ int main(void)
 	//snmpd_init(SNMPmanagerIP,SNMPagentIP,SOCK_agent,SOCK_trap);	
 	snmp_init();
 	loadwebpages();
-	fractionOfSecond = 0;
+
 	
 	HAL_UART_Abort(&huart2);
   if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
@@ -233,13 +253,18 @@ int main(void)
 //    /* Transfer error in reception process */
 //    Error_Handler();
 //  }
-	
+	//irigB start
+	HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
+	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_Bit0, 1280, DAC_ALIGN_12B_R);
+	HAL_TIM_Base_Start(&htim2);
+
   while (1)
   {
 		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		HAL_IWDG_Refresh(&hiwdg);
 		machGiaoTiep();
 		
   }
@@ -262,8 +287,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
@@ -335,6 +361,35 @@ static void MX_DAC1_Init(void)
   /* USER CODE BEGIN DAC1_Init 2 */
 
   /* USER CODE END DAC1_Init 2 */
+
+}
+
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_64;
+  hiwdg.Init.Window = 4095;
+  hiwdg.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
 
 }
 
@@ -444,7 +499,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 160-1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 999;
+  htim3.Init.Period = 999+1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -491,7 +546,7 @@ static void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 16000-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 9999;
+  htim4.Init.Period = 9999+1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -579,7 +634,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 9600;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -691,32 +746,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/**
-  * @brief EXTI line detection callbacks
-  * @param GPIO_Pin: Specifies the pins connected EXTI line
-	* Neu co GPS, se co xung PPS tai thoi diem bat dau moi giay
-  * If GPS avaiable, PPS pulse start at the start of a second
-  * @retval None
-  */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  //Dong bo xung PPS voi mach main GPS, moi lan co xung la thoi diem bat dau cua giay
-	//sync the start of a second by pps signal
-	if (GPIO_Pin == PPS_Pin)
-  {
-		//HAL_GPIO_WritePin(MAIN_PPS_GPIO_Port, MAIN_PPS_Pin, GPIO_PIN_SET);
-		//printf("PPS\r\n");
-		//fractionOfSecond = 0;
-  }
-	if (GPIO_Pin == INTn_Pin)
-  {
-		//Nhan duoc ban tin NTP, xu ly thoi gian va phan hoi
-		//Receied NTP message, processing and respond
-		//printf("NTP\r\n");
-		INT_NTP();
-  }
 
-}
 #ifdef __GNUC__
   /* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
      set to 'Yes') calls __io_putchar() */
@@ -744,30 +774,17 @@ PUTCHAR_PROTOTYPE
 
 void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac)
 {
-	
-//	if(_loop1 == 0) 
-//		{
-//			_loop1 = 1; 
-//			//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_Bit0, 1280, DAC_ALIGN_12B_R);
-//			hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit0;
-//		}
-//	else 
-//		{
-//			//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)_BitREF, 1280, DAC_ALIGN_12B_R);
-//			hdma_dac1_ch1.Instance->CMAR = (uint32_t)_BitREF;
-//			_loop1 = 0;
-//		}
 		//DAC se tao SIN tung bit0 bit1 bit REF theo bang irigb_code, quet xong 99 -> xong 1s thi quay lai 0 -> bat dau giay moi
 		switch(irigb_code[codecounter])
 		{
 			case IRIGB_bit0:
-				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit0;
+				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit0_real;
 				break;
 			case IRIGB_bit1:
-				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit1;
+				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_Bit1_real;
 				break;
 			case IRIGB_bitP:
-				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_BitREF;
+				hdma_dac1_ch1.Instance->CMAR = (uint32_t)_BitREF_real;
 				break;
 		}
 		codecounter++;

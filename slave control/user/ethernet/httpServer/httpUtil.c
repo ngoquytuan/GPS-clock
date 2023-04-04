@@ -14,22 +14,22 @@
 #include <string.h>
 #include <stdlib.h>
 #include "httpUtil.h"
-
+#include "mydefines.h"
 //wiz_NetInfo getWIZNETINFO;
 //Dung luon bien nay luu cho tiet kiem bo nho!!!
 extern wiz_NetInfo myipWIZNETINFO;
 extern uint8_t ntpTimeServer_ip[4]; 
-#define LOST_GPS_MASTER 1
+
 
 
 /************************************************************************************************/
 void stm32g474flashEraseThenSave(void);
 //Bien luu gia tri cho webserver
 
- uint8_t gps1_stt;
- uint8_t gps2_stt;
- uint8_t power1_stt;
- uint8_t power2_stt;
+extern uint8_t gps1_stt;
+extern uint8_t gps2_stt;
+extern uint8_t power1_stt;
+extern uint8_t power2_stt;
 extern uint8_t days;
 extern uint8_t months;
 extern uint8_t years;
@@ -38,7 +38,7 @@ extern uint8_t minutes;
 extern uint8_t seconds;
 extern uint16_t saved;
 extern uint8_t LEDintensity;
- int8_t lostSignal;
+extern int8_t lostSignal;
 // Pre-defined Get CGI functions
 
 void make_json_netinfo(uint8_t * buf, uint16_t * len);
@@ -165,6 +165,11 @@ uint8_t * set_basic_config_setting(uint8_t * uri)
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.sn);
 			//printf("Subnet: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
 		}
+		//boc tach DNS
+		if((param = get_http_param_value((char *)uri, "dns")))
+		{
+			inet_addr_((uint8_t*)param, myipWIZNETINFO.dns);
+		}
 		//boc tach NTP server IP
 		if((param = get_http_param_value((char *)uri, "ntpip")))
 		{
@@ -196,33 +201,11 @@ void make_cgi_basic_config_response_page(uint16_t delay, uint8_t * url, uint8_t 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void saveip()
 {		
-		printf("try to store to mem...\r\n");
+		//printf("try to store to mem...\r\n");
 		stm32g474flashEraseThenSave();
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-uint8_t predefined_set_cgi_processor(uint8_t * uri_name, uint8_t * uri, uint8_t * buf, uint16_t * len)
-{
-	uint8_t ret = 1;	// ret = '1' means 'uri_name' matched
-//	uint8_t val = 0;
 
-//	if(strcmp((const char *)uri_name, "set_diodir.cgi") == 0)
-//	{
-//		//val = set_diodir(uri);
-//		*len = sprintf((char *)buf, "%d", val);
-//	}
-////	else if(strcmp((const char *)uri_name, "set_diostate.cgi") == 0)
-////	{
-////		//val = set_diostate(uri);
-////		*len = sprintf((char *)buf, "%d", val);
-////	}
-//	else
-//	{
-//		ret = 0;
-//		//printf("predefined_set_cgi_processor not found\r\n");
-//	}
-
-	return ret;
-}
 
 uint8_t http_post_cgi_handler(uint8_t * uri_name, st_http_request * p_http_request, uint8_t * buf, uint32_t * file_len)
 {
@@ -258,7 +241,7 @@ uint8_t http_post_cgi_handler(uint8_t * uri_name, st_http_request * p_http_reque
 	return ret;
 }
 
-
+//Tao file json de phan hoi
 void make_json_netinfo(uint8_t * buf, uint16_t * len)
 {
 	wiz_NetInfo netinfo;
@@ -267,13 +250,13 @@ void make_json_netinfo(uint8_t * buf, uint16_t * len)
 	
 //{"mac":"00:08:DC:4F:EB:6E","txtip":"192.168.1.246","gw":"192.168.1.1","txtsn":"255.255.255.1","dns":"8.8.8.8","dhcp":"1","txtdays":"21","txtmonths":"01","txtyears":"2019","txthours":"01","txtminutes":"01","txtseconds":"01","txtgps01":"ON","txtgps02":"OFF","txtpower01":"ON","txtpower02":"OFF"}
 	// DHCP: 1 - Static, 2 - DHCP
-	if(lostSignal == LOST_GPS_MASTER)
+	if(lostSignal == LOST_RS485_GPS_MASTER)
 	{
 		*len = sprintf((char *)buf, "{\"mac\":\"%.2X:%.2X:%.2X:%.2X:%.2X:%.2X\",\"txtip\":\"%d.%d.%d.%d\",\"gw\":\"%d.%d.%d.%d\",\"txtsn\":\"%d.%d.%d.%d\",\"dns\":\"%d.%d.%d.%d\",\"dhcp\":\"%d\",\"txtdays\":\"%d\",\"txtmonths\":\"%d\",\"txtyears\":\"%d\",\"txthours\":\"%d\",\"txtminutes\":\"%d\",\"txtseconds\":\"%d\",\"txtgps01\":\"%s\",\"txtgps02\":\"%s\",\"txtpower01\":\"%s\",\"txtpower02\":\"%s\"}",
 											netinfo.mac[0], netinfo.mac[1], netinfo.mac[2], netinfo.mac[3], netinfo.mac[4], netinfo.mac[5],
 											netinfo.ip[0], netinfo.ip[1], netinfo.ip[2], netinfo.ip[3],
 											netinfo.gw[0], netinfo.gw[1], netinfo.gw[2], netinfo.gw[3],
-											netinfo.sn[0], netinfo.sn[1], netinfo.sn[2], netinfo.sn[3],
+											ntpTimeServer_ip[0], ntpTimeServer_ip[1], ntpTimeServer_ip[2], ntpTimeServer_ip[3],
 											netinfo.dns[0], netinfo.dns[1], netinfo.dns[2], netinfo.dns[3],
 											netinfo.dhcp,
 											days,
@@ -294,7 +277,8 @@ void make_json_netinfo(uint8_t * buf, uint16_t * len)
 											netinfo.mac[0], netinfo.mac[1], netinfo.mac[2], netinfo.mac[3], netinfo.mac[4], netinfo.mac[5],
 											netinfo.ip[0], netinfo.ip[1], netinfo.ip[2], netinfo.ip[3],
 											netinfo.gw[0], netinfo.gw[1], netinfo.gw[2], netinfo.gw[3],
-											netinfo.sn[0], netinfo.sn[1], netinfo.sn[2], netinfo.sn[3],
+//										netinfo.sn[0], netinfo.sn[1], netinfo.sn[2], netinfo.sn[3],
+											ntpTimeServer_ip[0], ntpTimeServer_ip[1], ntpTimeServer_ip[2], ntpTimeServer_ip[3],
 											netinfo.dns[0], netinfo.dns[1], netinfo.dns[2], netinfo.dns[3],
 											netinfo.dhcp,
 											days,
@@ -312,158 +296,3 @@ void make_json_netinfo(uint8_t * buf, uint16_t * len)
 	
 }
 
-#ifdef unknown
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void make_json_serial_data(uint8_t * buf, uint16_t * len)
-{
-	uint8_t * buf_ptr;
-	//buf_ptr = getUSART1buf();
-	*len = sprintf((char *)buf,"getRs232DataCallback({\"data\":\"%s\"});", buf_ptr); // serial buffer
-
-	// Serial data buffer clear
-	//USART1_flush();
-}
-
-
-/************************************************************************************************/
-uint8_t predefined_get_cgi_processor(uint8_t * uri_name, uint8_t * buf, uint16_t * len)
-{
-		uint8_t ret = 1;	// ret = 1 means 'uri_name' matched
-	uint8_t cgibuf[14] = {0, };
-	int8_t cgi_dio = -1;
-	int8_t cgi_ain = -1;
-
-	uint8_t i;
-
-	if(strcmp((const char *)uri_name, "todo.cgi") == 0)
-	{
-		// to do
-		;//make_json_todo(buf, len);
-	}
-	else if(strcmp((const char *)uri_name, "get_netinfo.cgi") == 0)
-	{
-		make_json_netinfo2(buf, len);
-	}
-	else
-	{
-		// get_dio0.cgi ~ get_dio15.cgi
-		for(i = 0; i < DIOn; i++)
-		{
-			memset(cgibuf, 0x00, 14);
-			sprintf((char *)cgibuf, "get_dio%d.cgi", i);
-			if(strcmp((const char *)uri_name, (const char *)cgibuf) == 0)
-			{
-				make_json_dio(buf, len, i);
-				cgi_dio = i;
-				break;
-			}
-		}
-
-		if(cgi_dio < 0)
-		{
-			// get_ain0.cgi ~ get_ain5.cgi (A0 - A5), get_ain6.cgi for on-board potentiometer / Temp.Sensor
-			for(i = 0; i < AINn; i++)
-			{
-				memset(cgibuf, 0x00, 14);
-				sprintf((char *)cgibuf, "get_ain%d.cgi", i);
-				if(strcmp((const char *)uri_name, (const char *)cgibuf) == 0)
-				{
-					make_json_ain(buf, len, i);
-					cgi_ain = i;
-					break;
-				}
-			}
-		}
-
-		if((cgi_dio < 0) && (cgi_ain < 0)) ret = 0;
-	}
-
-	return ret;
-}
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Pre-defined Get CGI functions
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void make_json_dio(uint8_t * buf, uint16_t * len, uint8_t pin)
-{
-	uint8_t pin_state 	= 1;//Chip_GPIO_GetPinState(LPC_GPIO, dio_ports[pin], dio_pins[pin]);
-	uint8_t pin_dir 	= 2;//Chip_GPIO_GetPinDIR(LPC_GPIO, dio_ports[pin], dio_pins[pin]);
-
-	*len = sprintf((char *)buf, "DioCallback({\"dio_p\":\"%d\",\
-											\"dio_s\":\"%d\",\
-											\"dio_d\":\"%d\"\
-											});",
-											pin,					// Digital io pin number
-											pin_state,				// Digital io status
-											pin_dir					// Digital io directions
-											);
-}
-
-void make_json_ain(uint8_t * buf, uint16_t * len, uint8_t pin)
-{
-	*len = sprintf((char *)buf, "AinCallback({\"ain_p\":\"%d\",\
-											\"ain_v\":\"%d\"\
-											});",
-											pin,					// ADC input pin number
-											6		// get_ADC_val(pin), ADC input value
-											);
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Pre-defined Set CGI functions
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-int8_t set_diodir(uint8_t * uri)
-{
-	uint8_t * param;
-	uint8_t pin = 0, val = 0;
-
-	//printf("uri :%s\r\n",uri);
-	
-	if((param = get_http_param_value((char *)uri, "pin"))) // GPIO; D0 ~ D15
-	{
-		pin = (uint8_t)ATOI(param, 10);
-		if(pin > 15) return -1;
-
-		if((param = get_http_param_value((char *)uri, "val")))  // Direction; NotUsed/Input/Output
-		{
-			val = (uint8_t)ATOI(param, 10);
-			if(val > Output) val = Output;
-		}
-	}
-
-	if(val == Input) 		;//Chip_GPIO_SetPinDIRInput(LPC_GPIO, dio_ports[pin], dio_pins[pin]);	// Input
-	else 					;//Chip_GPIO_SetPinDIROutput(LPC_GPIO, dio_ports[pin], dio_pins[pin]); // Output
-
-	return pin;
-}
-
-
-
-int8_t set_diostate(uint8_t * uri)
-{
-	uint8_t * param;
-	uint8_t pin = 0, val = 0;
-
-	//printf("uri :%s\r\n",uri);
-	//Toi day trong uri van chua nguyen ban tin
-	if((param = get_http_param_value((char *)uri, "pin"))) // GPIO; D0 ~ D15
-	{
-		pin = (uint8_t)ATOI(param, 10);
-		if(pin > 15) return -1;
-
-		if((param = get_http_param_value((char *)uri, "val")))  // State; high(on)/low(off)
-		{
-			val = (uint8_t)ATOI(param, 10);
-			if(val > On) val = On;
-		}
-
-		if(val == On) 		;//Chip_GPIO_SetPinState(LPC_GPIO, dio_ports[pin], dio_pins[pin], true); 	// High
-		else				;//Chip_GPIO_SetPinState(LPC_GPIO, dio_ports[pin], dio_pins[pin], false);	// Low
-	}
-
-	return pin;
-}
-#endif

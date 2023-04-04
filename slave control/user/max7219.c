@@ -1,6 +1,6 @@
 #include "main.h"
 #include <string.h>
-
+#include "mydefines.h"
 
 uint8_t LEDintensity = 2;
 
@@ -43,7 +43,7 @@ unsigned char i;
 	{
 		if((dat&0x80)==0x80) HAL_GPIO_WritePin(LED_DIN_GPIO_Port, LED_DIN_Pin, GPIO_PIN_SET);//GPIO_SetBits(GPIOA, MAX7219_DIN);
 		else HAL_GPIO_WritePin(LED_DIN_GPIO_Port, LED_DIN_Pin, GPIO_PIN_RESET);//GPIO_ResetBits(GPIOA, MAX7219_DIN);
-
+		//HAL_Delay(1);
 		HAL_GPIO_WritePin(LED_CLK_GPIO_Port, LED_CLK_Pin, GPIO_PIN_RESET);//GPIO_ResetBits(GPIOA, MAX7219_CLK);
 		//HAL_Delay(1);
 		HAL_GPIO_WritePin(LED_CLK_GPIO_Port, LED_CLK_Pin, GPIO_PIN_SET);//GPIO_SetBits(GPIOA, MAX7219_CLK);
@@ -244,7 +244,7 @@ void day_display(void)
 #endif
 void chinhdosang(void)
 {
-	uint32_t i;
+	
 	LEDintensity++;
 	if(LEDintensity > 15) LEDintensity =1;
 	if(LEDintensity < 0) LEDintensity =1;
@@ -252,7 +252,7 @@ void chinhdosang(void)
 	#ifdef SLAVE_WALL
 	MAX7219_SendAddrDat2 (intensity,LEDintensity); //intensity
 	#endif
-	for (i=0;i<1000;i++);
+	//HAL_Delay(1000);
 }
 
 //END of led 7 seg
@@ -804,58 +804,52 @@ void line2_matrix_init (void)
 {
 	if(LEDintensity < 1)  LEDintensity =1;
 	if(LEDintensity > 15) LEDintensity =15;
+	
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_RESET);
 	
-	//HAL_Delay(1);
 	line2_matrix_SendAdd(shut_down,0x01); //normal operation
 	line2_matrix_SendAdd(shut_down,0x01); //normal operation
 	line2_matrix_SendAdd(shut_down,0x01); //normal operation
 	line2_matrix_SendAdd(shut_down,0x01); //normal operation
 	line2_matrix_SendAdd(shut_down,0x01); //normal operation
-	line2_matrix_SendAdd(shut_down,0x01); //normal operation
+	//line2_matrix_SendAdd(shut_down,0x01); //normal operation
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
-	//for (i=0;i<8;i++);
-	//HAL_Delay(1);
-	/*HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_RESET);HAL_Delay(1);
+
+	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_RESET);HAL_Delay(1);
 	line2_matrix_SendAdd(decodeMode,0x00); //decoding
 	line2_matrix_SendAdd(decodeMode,0x00); //decoding
 	line2_matrix_SendAdd(decodeMode,0x00); //decoding
 	line2_matrix_SendAdd(decodeMode,0x00); //decoding
 	line2_matrix_SendAdd(decodeMode,0x00); //decoding
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
-	HAL_Delay(1);*/
+	
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_RESET);
-	//HAL_Delay(1);
-	//for (i=0;i<8;i++);
+	
 	line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 	line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 	line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 	line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 	line2_matrix_SendAdd(intensity,LEDintensity); //intensity
-	line2_matrix_SendAdd(intensity,LEDintensity); //intensity
+	//line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
-	//for (i=0;i<8;i++);
-	//HAL_Delay(1);
+	
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_RESET);
-	//HAL_Delay(1);
-	//for (i=0;i<8;i++);
+	
 	line2_matrix_SendAdd(scanLimit,0x07); //all digits on
 	line2_matrix_SendAdd(scanLimit,0x07); //all digits on
 	line2_matrix_SendAdd(scanLimit,0x07); //all digits on
 	line2_matrix_SendAdd(scanLimit,0x07); //all digits on
 	line2_matrix_SendAdd(scanLimit,0x07); //all digits on
-	line2_matrix_SendAdd(scanLimit,0x07); //all digits on
+	//line2_matrix_SendAdd(scanLimit,0x07); //all digits on
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
-	//for (i=0;i<8;i++);
-	//HAL_Delay(1);
-	/*HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_RESET);HAL_Delay(1);
+	
+	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_RESET);HAL_Delay(1);
 	line2_matrix_SendAdd(disTest,0x00); //display test off
 	line2_matrix_SendAdd(disTest,0x00); //display test off
 	line2_matrix_SendAdd(disTest,0x00); //display test off
 	line2_matrix_SendAdd(disTest,0x00); //display test off
 	line2_matrix_SendAdd(disTest,0x00); //display test off
 	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
-	HAL_Delay(1);*/
 	
 }
 
@@ -914,7 +908,7 @@ void up7_matrix_init (void)
 	up7_matrix_SendAdd(shut_down,0x01); //normal operation
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 	
-	/*HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);HAL_Delay(1);
+	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);
 	up7_matrix_SendAdd(decodeMode,0x00); //decoding
 	up7_matrix_SendAdd(decodeMode,0x00); //decoding
 	up7_matrix_SendAdd(decodeMode,0x00); //decoding
@@ -923,7 +917,7 @@ void up7_matrix_init (void)
 	up7_matrix_SendAdd(decodeMode,0x00); //decoding
 	up7_matrix_SendAdd(decodeMode,0x00); //decoding
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
-	HAL_Delay(1);*/
+	
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);
 	up7_matrix_SendAdd(intensity,LEDintensity); //intensity
 	up7_matrix_SendAdd(intensity,LEDintensity); //intensity
@@ -944,7 +938,7 @@ void up7_matrix_init (void)
 	up7_matrix_SendAdd(scanLimit,0x07); //all digits on
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
 	
-	/*HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);HAL_Delay(1);
+	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);
 	up7_matrix_SendAdd(disTest,0x00); //display test off
 	up7_matrix_SendAdd(disTest,0x00); //display test off
 	up7_matrix_SendAdd(disTest,0x00); //display test off
@@ -953,8 +947,6 @@ void up7_matrix_init (void)
 	up7_matrix_SendAdd(disTest,0x00); //display test off
 	up7_matrix_SendAdd(disTest,0x00); //display test off
 	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
-	HAL_Delay(1);*/
-	
 	
 	
 }
@@ -965,6 +957,12 @@ void chinhdosang(void)
 	{
 		uint32_t i;
 		
+		LEDintensity++;
+		if(LEDintensity > 15) LEDintensity =1;
+		if(LEDintensity < 0) LEDintensity =1;
+		
+		//Luu bo sang moi vao bo nho!
+		stm32g474flashEraseThenSave();
 		
 		HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_RESET);
 		up7_matrix_SendAdd(intensity,LEDintensity); //intensity
@@ -983,9 +981,9 @@ void chinhdosang(void)
 		line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 		line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 		line2_matrix_SendAdd(intensity,LEDintensity); //intensity
-		line2_matrix_SendAdd(intensity,LEDintensity); //intensity
+		//line2_matrix_SendAdd(intensity,LEDintensity); //intensity
 		HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
-		for (i=0;i<1000;i++);
+		
 	}
 
 #endif

@@ -8,7 +8,7 @@
 
 //#include "ntpserver.h"
 // Time Server Port
-//#define SOCK_UDPS        			0
+//#define socket_number        			0
 //#define NTP_PORT							123
 //#define NTP_PACKET_SIZE 			48
 //#define NTP_PACKET_RAWSIZE		56
@@ -68,8 +68,16 @@ void wzn_event_handle(void);
 void ntpserverdefaultconfig(void);
 int32_t ntpserverprocess(void);
 
-
+//Them doan nay xem sao! => sua loi NTP server bi sai
 void INT_NTP(void)
+{
+	
+
+	micros_recv = 100*fractionOfSecond;
+	//else micros_recv = 100*fractionOfSecond;
+	recvTime = (timenow + STARTOFTIME);//gio luc nhan dc ban tin
+}
+void INT_NTP_backup(void)
 {
 	micros_recv = 100*fractionOfSecond;
 	recvTime = (timenow + STARTOFTIME);//gio luc nhan dc ban tin
@@ -120,11 +128,15 @@ void ntpserverdefaultconfig(void)
 					
 		unixTime_last_sync = (timenow + STARTOFTIME);//gio luc tryen ban tin
 		unixTime_last_sync = htonl(unixTime_last_sync);// gio luc truyen
+		//memcpy(&serverPacket[12], &unixTime_last_sync, 4);	
 		memcpy(&serverPacket[16], &unixTime_last_sync, 4);
 	
 }
-
-int32_t NTPUDP(void)
+void reInitNTP(uint8_t socket_number)
+{
+	close(socket_number);
+}
+int32_t NTPUDP(uint8_t socket_number)
 {
    int32_t  ret;
    uint16_t size, sentsize=0;
@@ -132,18 +144,18 @@ int32_t NTPUDP(void)
    uint16_t destport;
 	 
 	// Ban tin NTP co size = 56 ( ca header : IP[4],port[2],length[2], tru di header chi con 48
-   switch(getSn_SR(SOCK_UDPS))
+   switch(getSn_SR(socket_number))
    {
       case SOCK_UDP :
-         if((size = getSn_RX_RSR(SOCK_UDPS)) == NTP_PACKET_RAWSIZE)//56 is size raw of NTP message
+         if((size = getSn_RX_RSR(socket_number)) == NTP_PACKET_RAWSIZE)//56 is size raw of NTP message
          {
 
-					 ret = recvfrom(SOCK_UDPS,clientPacket,size,destip,(uint16_t*)&destport);
+					 ret = recvfrom(socket_number,clientPacket,size,destip,(uint16_t*)&destport);
             
 					  
             if(ret <= 0)
             {
-               printf("%d: recvfrom error. %d\r\n",SOCK_UDPS,ret);
+               //printf("%d: recvfrom error. %d\r\n",socket_number,ret);
                return ret;
             }
 					
@@ -169,6 +181,7 @@ int32_t NTPUDP(void)
 						
 						memcpy(&serverPacket[16], &serverPacket[32], 8);//unixTime_last_sync == recvTime
 						
+
 						transmitTime = (timenow + STARTOFTIME);//gio luc tryen ban tin
 						
 					  //micros_transmit = 100*(fractionOfSecond);
@@ -180,6 +193,8 @@ int32_t NTPUDP(void)
 						
 						//Tinh toan phan thap phan cua thoi diem truyen tin
 						
+						
+						
 						micros_transmit = 100*fractionOfSecond;
 						micros_transmit = (micros_transmit + 1) * USECSHIFT;
 						micros_transmit = htonl(micros_transmit);//Ko hieu lam gi nhi, nhung dung!
@@ -188,11 +203,11 @@ int32_t NTPUDP(void)
 						//Gui tra ban tin NTP
 						while(sentsize != NTP_PACKET_SIZE)
             {
-               ret = sendto(SOCK_UDPS,serverPacket,NTP_PACKET_SIZE,destip,destport);
+               ret = sendto(socket_number,serverPacket,NTP_PACKET_SIZE,destip,destport);
 							 
                if(ret < 0)
                {
-                  printf("%d: sendto error. %d\r\n",SOCK_UDPS,ret);
+                  //printf("%d: sendto error. %d\r\n",socket_number,ret);
                   return ret;
                }
                sentsize += ret; // Don't care SOCKERR_BUSY, because it is zero.
@@ -204,11 +219,11 @@ int32_t NTPUDP(void)
          break;
       case SOCK_CLOSED:
 				 
-         if((ret=socket(SOCK_UDPS,Sn_MR_UDP,NTP_PORT,0x00)) != SOCK_UDPS)
+         if((ret=socket(socket_number,Sn_MR_UDP,NTP_PORT,0x00)) != socket_number)
             return ret;
-         printf(" Socket[%d] UDP Socket for NTP Time Server started, port [%d]\r\n", SOCK_UDPS, NTP_PORT);
+         printf(" Socket[%d] UDP Socket for NTP Time Server started, port [%d]\r\n", socket_number, NTP_PORT);
          break;
-      default :
+      default : //NVIC_SystemReset();
          break;
    }
    return 1;

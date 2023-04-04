@@ -51,8 +51,9 @@ extern int8_t lostSignal;
 extern time_t timenow;
 extern time_t built_time;
 extern struct tm* timeinfo;
-
+int8_t sat1,sat2,satInuse;
 void get_gpsStatus_all(void *ptr, uint8_t *len);
+extern uint32_t real_delay;
 //void currentUptime(void *ptr, uint8_t *len)
 //	{}
 //void setMyValue(int value)	//snmpset -v 1 -c public 192.168.1.246 .1.3.6.1.4.1.6.1.2 i 123456
@@ -67,6 +68,10 @@ void getMyValue()						//snmpget -v 1 -c public 192.168.1.246 .1.3.6.1.4.1.6.1.2
 }*/
 void get_GPS_stt(void *ptr, uint8_t *len);
 void get_POWER_stt(void *ptr, uint8_t *len);
+void get_GPS_sats(void *ptr, uint8_t *len)
+{
+	*len = sprintf((char *)ptr, "GPS1: [%d]; GPS2: [%d]; in use GPS%d", sat1,sat2,satInuse);
+}
 void get_GPS_stt(void *ptr, uint8_t *len)
 {
 	*len = sprintf((char *)ptr, "GPS1: [%s]; GPS2: [%s]", gps1_stt?"ON":"OFF", gps2_stt?"ON":"OFF");
@@ -96,12 +101,17 @@ void get_ntp_snmp_services(void *ptr, uint8_t *len)
 {
 	*len = sprintf((char *)ptr, "Request time: NTP= %d;SNMP= %d;",countOfNTPrequest, countOfSNMPrequest);
 }
+//void delaywithmain(void *ptr, uint8_t *len)
+//{
+//	*len = sprintf((char *)ptr, "Real delay %d ms;",real_delay);
+//}
+
 dataEntryType snmpData[] =
 {
     // System MIB
 	// SysDescr Entry
 	{8, {0x2b, 6, 1, 2, 1, 1, 1, 0},
-	SNMPDTYPE_OCTET_STRING, 30, {"GPS clock time server, GPS master 2022"},
+	SNMPDTYPE_OCTET_STRING, 30, {"GPS clock time server, Clock master 2022"},
 	NULL, NULL},
 
 	// SysObjectID Entry
@@ -150,6 +160,12 @@ dataEntryType snmpData[] =
 	{8, {0x2b, 6, 1, 4, 1, 6, 1, 5},
 	SNMPDTYPE_OCTET_STRING, 40, {""},
 	get_build_time, NULL},
+	{8, {0x2b, 6, 1, 4, 1, 6, 1, 6},
+	SNMPDTYPE_OCTET_STRING, 40, {""},
+	get_GPS_sats, NULL},
+//	{8, {0x2b, 6, 1, 4, 1, 6, 1, 7},
+//	SNMPDTYPE_OCTET_STRING, 40, {""},
+//	delaywithmain, NULL},
 
 };
 

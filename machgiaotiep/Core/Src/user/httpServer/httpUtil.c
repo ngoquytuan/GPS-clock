@@ -14,17 +14,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include "httpUtil.h"
+#include "connector.h"
 
-//wiz_NetInfo getWIZNETINFO;
 //Dung luon bien nay luu cho tiet kiem bo nho!!!
 extern wiz_NetInfo myipWIZNETINFO;
-#define LOST_GPS_MASTER 1
+
 
 
 /************************************************************************************************/
 void stm32g474flashEraseThenSave(void);
 //Bien luu gia tri cho webserver
-
+extern uint8_t IRIGB_GAIN;
 extern uint8_t gps1_stt;
 extern uint8_t gps2_stt;
 extern uint8_t power1_stt;
@@ -145,19 +145,33 @@ uint8_t * set_basic_config_setting(uint8_t * uri)
 		{
 			//inet_addr_((uint8_t*)param, value->network_info_common.local_ip);
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.ip);
-			printf("IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
+			//printf("IP: %d.%d.%d.%d\r\n",myipWIZNETINFO.ip[0],myipWIZNETINFO.ip[1],myipWIZNETINFO.ip[2],myipWIZNETINFO.ip[3]);
 		}
 		//boc tach Getway
 		if((param = get_http_param_value((char *)uri, "gw")))
 		{
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.gw);
-			printf("Getway: %d.%d.%d.%d\r\n",myipWIZNETINFO.gw[0],myipWIZNETINFO.gw[1],myipWIZNETINFO.gw[2],myipWIZNETINFO.gw[3]);
+			//printf("Getway: %d.%d.%d.%d\r\n",myipWIZNETINFO.gw[0],myipWIZNETINFO.gw[1],myipWIZNETINFO.gw[2],myipWIZNETINFO.gw[3]);
 		}
 		//boc tach Subnet
 		if((param = get_http_param_value((char *)uri, "sn")))
 		{
 			inet_addr_((uint8_t*)param, myipWIZNETINFO.sn);
-			printf("Subnet: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
+			//printf("Subnet: %d.%d.%d.%d\r\n",myipWIZNETINFO.sn[0],myipWIZNETINFO.sn[1],myipWIZNETINFO.sn[2],myipWIZNETINFO.sn[3]);
+		}
+		//boc tach dns
+		if((param = get_http_param_value((char *)uri, "dns")))
+		{
+			inet_addr_((uint8_t*)param, myipWIZNETINFO.dns);
+			//printf("DNS: %d.%d.%d.%d\r\n",myipWIZNETINFO.dns[0],myipWIZNETINFO.dns[1],myipWIZNETINFO.dns[2],myipWIZNETINFO.dns[3]);
+		}
+		//extern uint8_t IRIGB_GAIN;
+		//boc tach gain irigB
+		if((param = get_http_param_value((char *)uri, "gain")))
+		{
+			inet_addr_((uint8_t*)param, &IRIGB_GAIN);
+			if(IRIGB_GAIN > 10) IRIGB_GAIN = 10;
+			if(IRIGB_GAIN < 1) IRIGB_GAIN = 1;
 		}
 		
 	return ip;

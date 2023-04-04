@@ -568,6 +568,7 @@
 										"<li><label for='gw'>GW:</label><input id='txtgw' name='gw' type='text' size='20' value=\"0.0.0.0\"></li> "\
 										"<li><label for='sn'>SN:</label><input id='txtsn' name='sn' type='text' size='20' value=\"255.255.255.0\"></li> "\
 										"<li><label for='txtdns'>DNS:</label><input id='txtdns' name='dns' type='text' size='20' value=\"0.0.0.0\"></li> "\
+										"<li><label for='txtGain'>Gain:</label><input id='txtGain' name='gain' type='text' size='20' value=\"1\"> max 10, min 1</li><br> "\
 										"<input type=\"submit\" value=\"SAVE\">"\
 									"</ul>"\
 								"</body>"\

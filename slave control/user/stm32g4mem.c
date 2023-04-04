@@ -7,7 +7,17 @@
 extern wiz_NetInfo myipWIZNETINFO;
 extern uint8_t ntpTimeServer_ip[4];													 
  														 
+#define ADDR_FLASH_PAGE_47    ((uint32_t)0x08017800) /* Base @ of Page 47, 2 Kbytes */
+#define ADDR_FLASH_PAGE_48    ((uint32_t)0x08018000) /* Base @ of Page 48, 2 Kbytes */
+#define ADDR_FLASH_PAGE_49    ((uint32_t)0x08018800) /* Base @ of Page 49, 2 Kbytes */
+#define ADDR_FLASH_PAGE_59    ((uint32_t)0x0801D800) /* Base @ of Page 59, 2 Kbytes */
+#define ADDR_FLASH_PAGE_60    ((uint32_t)0x0801E000) /* Base @ of Page 60, 2 Kbytes */
+#define ADDR_FLASH_PAGE_61    ((uint32_t)0x0801E800) /* Base @ of Page 61, 2 Kbytes */
 
+#define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_59   /* Start @ of user Flash area */
+#define FLASH_USER_END_ADDR     (ADDR_FLASH_PAGE_60 + FLASH_PAGE_SIZE - 1)   /* End @ of user Flash area */
+
+#define myMem ((dataSave *) FLASH_USER_START_ADDR)
 
 #define DATA_32                 ((uint32_t)0x12345678)
 #define DATA_64                 ((uint64_t)0x1234567812345678)

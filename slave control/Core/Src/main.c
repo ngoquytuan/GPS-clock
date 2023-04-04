@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "mydefines.h"
 #include <time.h>
 #include "stdio.h"
 #include "wizchip_conf.h"
@@ -28,6 +29,35 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+const time_t built_time = 1668503063;
+uint8_t ntpTimeServer_ip[4] ={192, 168, 1, 39};// NTP time server 139.199.215.251
+//162.159.200.1
+#ifdef SLAVE_CONSOLE
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x23},
+															 .ip = {192, 168, 1, 19},
+															 .sn = {255,255,255,0},
+															 .gw = {192, 168, 22, 252},
+															 .dns = {0,0,0,0},
+															 .dhcp = NETINFO_STATIC };
+#endif
+#ifdef SLAVE_WALL
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x21},
+															 .ip = {192, 168, 1, 93},
+															 .sn = {255,255,255,0},
+															 .gw = {0, 0, 0, 0},
+															 .dns = {0,0,0,0},
+															 .dhcp = NETINFO_STATIC };
+#endif
+
+#ifdef SLAVE_MATRIX
+wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x22},
+															 .ip = {192, 168, 1, 96},
+															 .sn = {255,255,255,0},
+															 .gw = {0, 0, 0, 0},
+															 .dns = {0,0,0,0},
+															 .dhcp = NETINFO_STATIC };
+#endif
+
 
 /* USER CODE END PTD */
 
@@ -48,6 +78,7 @@ IWDG_HandleTypeDef hiwdg;
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
@@ -67,51 +98,26 @@ static void MX_I2C3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t ntpTimeServer_ip[4] ={139, 199, 215, 251};// NTP time server
-
-#ifdef SLAVE_CONSOLE
-wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x23},
-															 .ip = {192, 168, 22, 165},
-															 .sn = {255,255,255,0},
-															 .gw = {192, 168, 22, 252},
-															 .dns = {8,8,8,8},
-															 .dhcp = NETINFO_STATIC };
-#endif
-#ifdef SLAVE_WALL
-wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x21},
-															 .ip = {192, 168, 22, 165},
-															 .sn = {255,255,255,0},
-															 .gw = {192, 168, 22, 252},
-															 .dns = {8,8,8,8},
-															 .dhcp = NETINFO_STATIC };
-#endif
-
-#ifdef SLAVE_MATRIX
-wiz_NetInfo myipWIZNETINFO = { .mac = {0x00, 0x08, 0xDC, 0x55, 0x00, 0x22},
-															 .ip = {192, 168, 22, 165},
-															 .sn = {255,255,255,0},
-															 .gw = {192, 168, 22, 252},
-															 .dns = {8,8,8,8},
-															 .dhcp = NETINFO_STATIC };
-#endif
 
 
 
-time_t built_time,timenow = 1657599346;
+time_t timenow ;
 struct tm* timeinfo;
 struct tm currtime;
-uint8_t days = 0;
-uint8_t months = 0;
-uint8_t years = 0;
-uint8_t hours = 0;
-uint8_t minutes = 0;
-uint8_t seconds = 0;
+uint8_t days ;
+uint8_t months ;
+uint8_t years ;
+uint8_t hours ;
+uint8_t minutes ;
+uint8_t seconds ;
+uint8_t server_hour, server_minute, server_second,server_day, server_month,server_year ;
 // Buffer UART
 uint8_t aRxBuffer[RXBUFFERSIZE];			
 uint8_t volatile waitForSetTime = 0;															 
@@ -137,7 +143,7 @@ int main(void)
 	//LOAD FS
 	//config ...
   
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
@@ -153,25 +159,27 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C3_Init();
   MX_TIM4_Init();
-  //MX_IWDG_Init();
+  MX_IWDG_Init();
   MX_TIM1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
-	built_time = timenow;
-	
-	slaveClockFucnsInit();
 	HAL_TIM_Base_Start_IT(&htim1);
+	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_Base_Start_IT(&htim4);
 	
-	HAL_UART_Abort(&huart2);
-	if (HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
-  {
-    /* Transfer error in reception process */
-    Error_Handler();
-  }
-	//Luu IP NTP server!!!!
+	HAL_GPIO_WritePin(LOAD2_GPIO_Port, LOAD2_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
+	
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	
+	slaveClockFucnsInit();
+	#ifdef SLAVE_MATRIX
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_2|PC3_Pin, GPIO_PIN_SET);//Tat het den => dan dc ban tin
+	#endif
+	
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_RESET);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -179,8 +187,10 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-		slaveClockRun();
+
     /* USER CODE BEGIN 3 */
+		HAL_IWDG_Refresh(&hiwdg);
+		slaveClockRun();
   }
   /* USER CODE END 3 */
 }
@@ -295,7 +305,7 @@ static void MX_IWDG_Init(void)
 
   /* USER CODE END IWDG_Init 1 */
   hiwdg.Instance = IWDG;
-  hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_64;
   hiwdg.Init.Window = 4095;
   hiwdg.Init.Reload = 4095;
   if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
@@ -369,7 +379,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 12800-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 9999+1;
+  htim1.Init.Period = 9999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -396,9 +406,54 @@ static void MX_TIM1_Init(void)
 }
 
 /**
-  * @brief TIM3 Initialization Function
+  * @brief TIM2 Initialization Function
   * @param None
   * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 12800-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 99999;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval Tao bo dao dong 1ms
   */
 static void MX_TIM3_Init(void)
 {
@@ -459,9 +514,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = (128/2)-1;
+  htim4.Init.Prescaler = 12800-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 1999;
+  htim4.Init.Period = 19999;//2s
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -564,31 +619,31 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_LOAD_GPIO_Port, LED_LOAD_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : PC1_Pin PC3_Pin */
-  GPIO_InitStruct.Pin = PC1_Pin|PC3_Pin;
+  GPIO_InitStruct.Pin = PC1_Pin|GPIO_PIN_2|PC3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LOAD2_Pin */
   GPIO_InitStruct.Pin = LOAD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(LOAD2_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RD485_Pin LED_Pin */
   GPIO_InitStruct.Pin = RD485_Pin|LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SCSn_Pin RSTn_Pin */
   GPIO_InitStruct.Pin = SCSn_Pin|RSTn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : INTn_Pin FR_Pin */
@@ -607,7 +662,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = CLK2_Pin|DIN2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LED_LOAD_Pin */
@@ -620,7 +675,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : LED_CLK_Pin LED_DIN_Pin */
   GPIO_InitStruct.Pin = LED_CLK_Pin|LED_DIN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 

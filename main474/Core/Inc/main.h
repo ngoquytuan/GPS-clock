@@ -53,17 +53,9 @@ extern uint32_t tim20ct;
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-/* Size of Reception buffer */
-#define RX1BUFFERSIZE                      1000
-#define RX2BUFFERSIZE                      1000
-#define RX3BUFFERSIZE                      100
 
-// hieu chuan gia tri dien ap
-#define k12v 		0.0384
-#define k5v 		0.0384
-#define kDCin1 	0.0384
-#define kDCin2 	0.0384
-#define fractionOfSecond TIM3->CNT
+
+
 typedef struct{
 
   uint16_t vin1x10;//dien ap vao 1 x10, 240 = 24.0V
@@ -107,29 +99,36 @@ typedef struct{
 #define GPS1PPS_GPIO_Port GPIOA
 #define GPS1PPS_EXTI_IRQn EXTI15_10_IRQn
 //#define LED_GPS2_Pin GPIO_PIN_10
-//#define LED_GPS2_GPIO_Port GPIOC
-//#define LED_GPS1_Pin GPIO_PIN_11
-//#define LED_GPS1_GPIO_Port GPIOC
-//#define LED_CPU_Pin GPIO_PIN_12
-//#define LED_CPU_GPIO_Port GPIOC
-/* USER CODE BEGIN Private defines */
-#define LED_GPS2_Pin GPIO_PIN_12
 #define LED_GPS2_GPIO_Port GPIOC
 #define LED_GPS1_Pin GPIO_PIN_11
 #define LED_GPS1_GPIO_Port GPIOC
-#define LED_CPU_Pin GPIO_PIN_10
+//#define LED_CPU_Pin GPIO_PIN_12
 #define LED_CPU_GPIO_Port GPIOC
+/* USER CODE BEGIN Private defines */
+#define LED_GPS2_Pin GPIO_PIN_12
+#define LED_CPU_Pin GPIO_PIN_10
+
 extern uint8_t days,months,years,hours,minutes,seconds ;
 void MX_ADC2_Init_MOD(void);
 void scan_ADC(void);
 
-void UpdateLed(void);
-//void DisplayRTC_Time(void);
+
 void Display_Time(void);
 void checkUART(void);
 void main_init(void);
 void oneSecondCount(void);
+void tasks(void);
 void main_apps(void);
+extern ADC_HandleTypeDef hadc2;
+extern UART_HandleTypeDef huart3;
+extern TIM_HandleTypeDef htim20;
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
+
+void ADC_Select_CH17(void);
+void ADC_Select_CH3(void);
+void ADC_Select_CH4(void);
+void ADC_Select_CH13(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

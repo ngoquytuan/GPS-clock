@@ -20,9 +20,17 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32g4xx_it.h"
-//#include "stdio.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "time.h"
+#include "stdio.h"
+
+#include "mydefines.h"
+#ifdef OverTheAir
+extern char udp_message[];
+extern uint8_t send_debug_message;
+extern uint8_t mysize;
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,18 +50,38 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+extern uint8_t setTimeNow ;
 extern uint8_t u2Timeout;
 extern volatile uint8_t waitForSetTime;
 extern uint16_t t_check_link_ms;
+extern uint8_t t_days, t_months, t_years, t_hours, t_minutes, t_seconds;
+uint32_t ms_couters=0;
 
-uint32_t timct=0;
+uint8_t tim4ITflag = 0;
 volatile uint32_t tim4ct=0;
 volatile uint32_t snmp_tick_1ms = 0;
-
+extern uint8_t WAIT_FOR_SET_TIME;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
+extern struct tm currtime;
+extern time_t timenow ;
+extern uint8_t just_set_time_flag;
+
+void setNewSec(void)
+{
+	ghids(DS_SECOND_REG,	server_second);
+	just_set_time_flag = 1;
+	#ifdef OverTheAir
+				send_debug_message = 1;
+				mysize = sprintf(udp_message,"SEC set\r\n");
+  #endif
+	//seconds = server_second;
+	//HAL_GPIO_WritePin(RD485_GPIO_Port, RD485_Pin, GPIO_PIN_SET);
+	//printf("SEC set!!!!\r\n");
+	//laythoigian();
+}
 
 /* USER CODE END PFP */
 
@@ -64,6 +92,7 @@ volatile uint32_t snmp_tick_1ms = 0;
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 extern UART_HandleTypeDef huart2;
@@ -247,8 +276,22 @@ void TIM1_UP_TIM16_IRQHandler(void)
   /* USER CODE END TIM1_UP_TIM16_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 1 */
-  
+
   /* USER CODE END TIM1_UP_TIM16_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**
@@ -263,7 +306,8 @@ void TIM3_IRQHandler(void)
   /* USER CODE BEGIN TIM3_IRQn 1 */
   snmp_tick_1ms++;
 	t_check_link_ms++;
-  timct++;
+  ms_couters++;
+	
 	if(u2Timeout>1) u2Timeout--;
   /* USER CODE END TIM3_IRQn 1 */
 }
@@ -278,7 +322,14 @@ void TIM4_IRQHandler(void)
   /* USER CODE END TIM4_IRQn 0 */
   HAL_TIM_IRQHandler(&htim4);
   /* USER CODE BEGIN TIM4_IRQn 1 */
-  tim4ct++;
+  //Moi 2s vao day 1 lan
+	//tim4ITflag = 1;
+	//HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+	if(WAIT_FOR_SET_TIME == 1)
+	{
+		WAIT_FOR_SET_TIME = 0;
+		setNewSec();
+	}
   /* USER CODE END TIM4_IRQn 1 */
 }
 

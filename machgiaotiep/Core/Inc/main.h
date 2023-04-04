@@ -54,8 +54,8 @@ extern uint8_t minutes ;
 extern uint8_t seconds ;
 
 /* Size of Reception buffer */
-#define RXBUFFERSIZE                      100
-#define RX1BUFFERSIZE                      30
+#define RXBUFFERSIZE                      99
+#define RX1BUFFERSIZE                     99
 extern uint8_t Rx1Buffer[];
 extern uint8_t aRxBuffer[];
 //#define DebugEnable
@@ -66,26 +66,32 @@ extern uint8_t aRxBuffer[];
 
 #define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_47   /* Start @ of user Flash area */
 #define FLASH_USER_END_ADDR     (ADDR_FLASH_PAGE_48 + FLASH_PAGE_SIZE - 1)   /* End @ of user Flash area */
+//Cau truc nay phai dung thu tu
 typedef struct {
 	uint8_t ip[4];
 	uint8_t sn[4];
 	uint8_t gw[4];
 	uint8_t dns[4];
 	uint32_t keyword;
+	uint32_t irigGain;
 } dataSave;		
 #define myMem ((dataSave *) FLASH_USER_START_ADDR)
 void stm32g474flashEraseThenSave(void);
 void stm32g474_FactoryLoad(void);
-int32_t NTPUDP(void);
+
+int32_t NTPUDP(uint8_t socket_number);
+void reInitNTP(uint8_t socket_number);
 
 #define IRIGB_bit0 0
 #define IRIGB_bit1 1
 #define IRIGB_bitP 2
 
+void resetirigbcode(void);
 void build_irigB_code(void);
 void w5500_lib_init(void);
 void ntpserverdefaultconfig(void);
 void INT_NTP(void);
+
 void machGiaoTiep(void);
 /* USER CODE END EM */
 
@@ -114,8 +120,7 @@ void Error_Handler(void);
 #define PPS_GPIO_Port GPIOA
 #define PPS_EXTI_IRQn EXTI15_10_IRQn
 /* USER CODE BEGIN Private defines */
-#define GPS_MASTER_OK   1
-#define LOST_GPS_MASTER 0
+
 //Number of seconds from 1st January 1900 to start of Unix epoch
 //According to the Time protocol in RFC 868 it is 2208988800L.
 #define STARTOFTIME 2208988800UL

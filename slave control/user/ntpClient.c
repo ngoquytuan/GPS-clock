@@ -1,21 +1,50 @@
 #include <time.h>
 #include "socketdefines.h"
+#include "mydefines.h"
 #include "main.h"
 #include <stdint.h>
 #include <stdio.h>
 #include "socket.h"
 
+//#define NTP_CLIENT_DEBUG
+
+#ifdef OverTheAir
+extern char udp_message[];
+extern uint8_t send_debug_message;
+extern uint8_t mysize;
+#endif
+uint8_t t_days, t_months, t_years, t_hours, t_minutes, t_seconds;
+uint8_t WAIT_FOR_SET_TIME = 0;
+
+extern uint32_t countOfNTPrequest;
+extern uint32_t countOfNTP_Rec;
+
+extern time_t built_time;
+extern struct tm currtime;
+uint8_t setTimeNow = 0;
 extern uint8_t  synchronized_ntp;
 extern uint16_t synchronizePeriod;
-uint8_t NTP_alreadySent =0;
-uint8_t NTP_alreadySentTimeOut = 10;
+uint8_t NTP_Server_Responded = 0;
+uint8_t NTP_alreadySent = 1;
+uint8_t NTP_alreadySentTimeOut = 13;
 extern volatile uint8_t waitForSetTime;
-uint8_t NTP_busy =0;
 
-#define fractionOfSecond TIM1->CNT
+
+
 time_t t0,t0Frac,t3Frac,t3;
+time_t loop_delay;
 time_t round_trip_delay;
 time_t newfractionOfSecond;
+time_t Server_time;
+
+int32_t offset;
+int32_t avg_offset;
+int32_t avg_offset_stable;//Gia tri sai lech on dinh
+int32_t lastOffset = 0;
+int32_t deltaOffset = 0;
+#define HeSoOnDinh 2
+uint8_t TimeServerStable = 0;
+
 /* Shifts usecs in unixToNtpTime */
 //#ifndef USECSHIFT
 //#define USECSHIFT (1LL << 32) * 1.0e-6
@@ -27,11 +56,11 @@ time_t newfractionOfSecond;
 
 
 
-#define ntpClientDebug
+//#define ntpClientDebug
 #define	MAX_SNTP_BUF_SIZE	sizeof(ntpformat)		///< maximum size of DNS buffer. */
 
 
-#define sntp_port 1234 //my sntp port, cho de gui ban ti ve
+#define sntp_port 1234 //my sntp port, cho de gui ban tin ve
 #define ntp_port		123                     //ntp server port number
 #define SECS_PERDAY		86400UL             	// seconds in a day = 60*60*24
 #define UTC_ADJ_HRS		0              	        // Vietnam : GMT+7
@@ -41,7 +70,8 @@ void SNTP_init(void);
 int8_t SNTP_run(void);
 
 extern time_t timenow;
-extern struct tm* timeinfo;
+extern uint8_t time2SaveRTC;
+
 extern uint8_t ntpTimeServer_ip[4];
 
 uint8_t TimeIsSet = 0;
@@ -49,75 +79,24 @@ uint16_t RetrySend = 0; //60 giay
 uint16_t sycnPeriod = 0;// 1 gio
 //uint8_t Domain_ntpTimeServer[] = "0.asia.pool.ntp.org";    // for Example domain name
 //uint8_t Domain_ntpTimeServer[] = "time.windows.com";
-//uint8_t Domain_IP[4]  = {0, };               // Translated IP address by DNS
-//#define DNS_BUF_SIZE   200
+
 uint8_t ntpTimeServer_buf[60];
-
-//uint8_t ntpTimeServer_ip[4] ={103, 123, 108, 222};// NTP time server
-
-//uint8_t ntpTimeServer_ip[4] ={192, 168, 1, 7};// NTP time server
-//uint8_t ntpTimeServer_buf[56];
 uint8_t ntpmessage[48]={0};
-//uint8_t ntpServerRespond[56];
+
+
 // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
 const uint32_t seventyYears = 2208988800;
 
 time_t micros_transmit;
 double sec_frac;
-uint32_t sec;
 
-void processNTPmeassage(void)
-{
-	uint16_t size;
-	uint32_t destip = 0;
-	uint16_t destport;
-	
-	if ((size = getSn_RX_RSR(SOCK_SNTP)) > 0)
-		{
-			printf("NTP received size:%d \r\n",size);
-			//if (size > 56) size = 56;	// if Rx data size is lager than TX_RX_MAX_BUF_SIZE
-			recvfrom(SOCK_SNTP, ntpTimeServer_buf, 56, (uint8_t *)&destip, &destport);
-			
-			close(SOCK_SNTP);
-			//printf("Closed SOCK NTP\r\n");
-			synchronizePeriod = 6;
-			synchronized_ntp = 1;
-			NTP_alreadySent  = 0;
-		}
-		else printf("NTP error???\r\n");
-	//synchronized_ntp = 1;
-}
 
-void wzn_event_handle(void)
-{
-	uint16_t ir = 0;
-	uint8_t sir = 0;
-	
-	
-	if (ctlwizchip(CW_GET_INTERRUPT, &ir) == -1) {
-		printf("Cannot get ir...");
-		return;
-	}
-	//set ngat voi tung socket!!!
-	if (ir & IK_SOCK_2) 
-		{
-				sir = getSn_IR(SOCK_SNTP);
-				
-				if ((sir & Sn_IR_RECV) > 0) {
-					/* Clear Sn_IR_RECV flag. */
-					setSn_IR(SOCK_SNTP, Sn_IR_RECV);
-					
-					return;
-				}
-				else if ((sir & Sn_IR_SENDOK) > 0) {
-					/* Clear Sn_IR_SENDOK flag. */
-					setSn_IR(SOCK_SNTP, Sn_IR_SENDOK);					
-				}
-		}
-}
+
+
 
 void SNTP_init(void)
 {
+	//db 00 0a e9 00 00 00 8a 00 08 c2 9d 00 00 00 00 e1 0f 48 0f 0a 93 29 3d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 e1 0f 48 12 ea 93 54 db
 	  // Initialize values needed to form NTP request
 	  // (see URL above for details on the packets)
 	  ntpmessage[0] = 0xE3;   // LI, Version, Mode
@@ -129,145 +108,293 @@ void SNTP_init(void)
 	  ntpmessage[13]  = 0x4E;
 	  ntpmessage[14]  = 49;
 	  ntpmessage[15]  = 52;
+	
 		
 }
 
 
 
 
-int8_t procesingNTPmessage(void)
+void sycn_RTC_Now(time_t x)
 {
-				
-			t3Frac = fractionOfSecond;
-			t3 = timenow;
-			round_trip_delay = t3 -t0;
-			round_trip_delay = round_trip_delay*10000 +t3Frac -t0Frac;
-			//printf("Round-trip delay %d ms\r\n",round_trip_delay/10);
-			
-			//Mot ban tin tu NTP Time Server
-			//24 3 6 e8 0 0 2c 3c 0 0 e 7d 8e 93 5c 5 e1 6 3a 76 77 3a 48 cf 0 0 0 0 0 0 0 0 e1 6 3e 9d 25 4f 82 99 e1 6 3e 9d 25 52 19 13
-//			for(i=0;i<48;i++)
-//						{
-//						   printf("%x ",*(ntpTimeServer_buf+i));
-//						}
-			sec = (ntpTimeServer_buf[40]<<24) + (ntpTimeServer_buf[41]<<16) + (ntpTimeServer_buf[42]<<8) + ntpTimeServer_buf[43] ;
-			
-			
-			
-			//micros_transmit = 100*1234;
-			micros_transmit = (ntpTimeServer_buf[44]<<24) + (ntpTimeServer_buf[45]<<16) + (ntpTimeServer_buf[46]<<8) + ntpTimeServer_buf[47] ;
-
-			sec_frac = micros_transmit / usShift;
-			sec_frac = sec_frac - 1;
-			sec_frac = sec_frac / 100;
-
-			//printf("micros_transmit: %u ; sec_frac %f ms\r\n",micros_transmit,sec_frac/10);
-			newfractionOfSecond = sec_frac + 1 + (round_trip_delay/2);
-			//Neu dung diem chuyen giao cua giay thi bo qua => qua mat giay moi roi
-			if(newfractionOfSecond > 9999) return 0;
-			
-			fractionOfSecond = newfractionOfSecond;
-			//printf("New sec_frac %d \r\n",newfractionOfSecond);
-			
-			timenow = sec - seventyYears;
-			
-			//printf("\r\nSynced with ntp server, seconds: %u\r\n",timenow);
-			timeinfo = localtime( &timenow );
-			
-			
+			timeinfo = localtime( &x );
 			asctime(timeinfo);
+	
+			seconds = timeinfo->tm_sec;
+			if(seconds > 56) return;
 			days = timeinfo->tm_mday;
 			months = 1+timeinfo->tm_mon;
 			years = timeinfo->tm_year-100;
 			hours = timeinfo->tm_hour;
 			minutes = timeinfo->tm_min;
-			seconds = timeinfo->tm_sec;
-			//Bo qua tranh loi
-			if(seconds > 58) return 0;
 			
-			if(newfractionOfSecond > 9963)//Sang giay moi roi....
-			{
-				//Thoi gian con it qua, neu luu co the bi tre
-				//seconds++;
-				//RTC_Update();
-				//printf("Time set NTP");
-				//Bo qua...
-				return 0;
-			}
-			else {waitForSetTime = 1;}
+			RTC_Update();
+			//printf("Save RTC! %d\r\n",timenow);
+}
+//Neu RTC cham qua
+uint8_t sycn_RTC_slow(time_t x)
+{
+	uint32_t temp;
+	//Du lieu sai
+	if(avg_offset_stable < 0	) 
+	{
+		TimeServerStable = 0;
+		avg_offset = 0;
+		return 0;
+	}
+	
+	
+	server_second++;
+
+	if(server_second > 56) 
+	{
+		TimeServerStable = 0;
+		avg_offset = 0;
+		return 0;
+	}
+
+	temp = fractionOfSecond + avg_offset_stable;
+	//printf("slower clock! temp %d\r\n",temp);
+	if(temp >19000) 
+		{
+			server_second ++;
+			TIM4->CNT = temp - 9999;
+		}
+		else TIM4->CNT = temp;
+	WAIT_FOR_SET_TIME = 1;
+	
 			
-			#ifdef			ntpClientDebug
-			//printf("Current local time and date: %s\r\n", asctime(timeinfo));
-		  //printf("HH-MM-SS :%d-%d-%d\r\n",hours,minutes,seconds);
-		  //printf("DD-MM-YY :%d-%d-%d\r\n",days,months,years);
-			#endif
-			
-#ifdef SLAVE_MATRIX
-			load_line1(days,months,years);
-			scan_7up();
-			load_line2(hours,minutes,seconds,1);
-			scan_5down();
-#endif
-#ifndef SLAVE_MATRIX
-#ifdef SLAVE_WALL			
-			day_display();
-#endif
-			console_display();
-			console_blink();
-#endif
-			
-			TimeIsSet = 1;
+	#ifdef NTP_CLIENT_DEBUG
+	printf("slower clock! Loop delay %d, avg offset :%d,TIM4 %d\r\n",loop_delay,avg_offset_stable,TIM4->CNT);	
+	#endif
+	    
 			return 1;
 }
-void sendNTPpacket(void)
-{
-	sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
-	NTP_busy = 1;				
-					t0 = timenow;
-					t0Frac = fractionOfSecond;
-					
-#ifdef			ntpClientDebug		
-					printf("NTP ask...\r\n");					
-//					printf("Gui ban tin di :");//35 0 6 236 0 0 0 0 0 0 0 0 49 78 49 52 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-//					for(i=0;i<48;i++)
-//					{
-//						printf("%d ",*(ntpmessage+i));
-//					
-//					}
-//					printf("\r\n");
-#endif			
-}
 
-int8_t SNTP_run2(void)
+
+/*
+avg_offset_stable
+*/
+uint8_t sycn_RTC_fast(time_t x)
+{
+	uint32_t temp;
+	//Du lieu sai
+	if(avg_offset_stable >= 0	) 
+	{
+		TimeServerStable = 0;
+		avg_offset = 0;
+		return 0;
+	}
+
+	timeinfo = localtime( &x );
+	asctime(timeinfo);
+	
+	t_seconds = timeinfo->tm_sec;
+
+	if(t_seconds > 56) 
+	{
+		TimeServerStable = 0;
+		avg_offset = 0;
+		return 0;
+	}
+	
+	temp = 19999 + avg_offset_stable +fractionOfSecond;
+	//printf("faster clock! temp %d\r\n",temp);	
+	if(temp >19000) 
+		{
+			server_second ++;
+			TIM4->CNT = temp - 10000;
+		}
+		else TIM4->CNT  =temp;
+	WAIT_FOR_SET_TIME = 1;
+	#ifdef NTP_CLIENT_DEBUG
+	printf("faster clock! Loop delay %d, avg offset :%d,TIM4 %d\r\n",loop_delay,avg_offset_stable,TIM4->CNT);	
+	#endif
+	return 1;
+}
+int8_t SNTP_run(void)
 {
 	uint32_t ret;
+	uint32_t sec;
 	uint16_t size;
 	uint32_t destip = 0;
 	uint16_t destport;
+	int32_t SecondOffset; 
+	
+	
 	
 	switch(getSn_SR(SOCK_SNTP))
 	{
 	case SOCK_UDP:
 		if ((size = getSn_RX_RSR(SOCK_SNTP)) > 0)
 		{
-			printf("NTP received size:%d \r\n",size);
+			
+			loop_delay = counterOf10Second;
+			NTP_Server_Responded = 1;
+			slave_clock.ntp_client_status = CONNECTED;
+			countOfNTP_Rec++;
 			//if (size > 56) size = 56;	// if Rx data size is lager than TX_RX_MAX_BUF_SIZE
 			recvfrom(SOCK_SNTP, ntpTimeServer_buf, 56, (uint8_t *)&destip, &destport);
-			//processNTPmeassage();
-			close(SOCK_SNTP);
-			//printf("Closed SOCK NTP\r\n");
-			synchronizePeriod = 6;
-			synchronized_ntp = 1;
-			NTP_alreadySent  = 0;
+			
+			if(slave_clock.rs458_connection == NO_CONNECTION)
+			{
+				//Tin hieu GPS ko on dinh!!!
+				if(ntpTimeServer_buf[1] != 1) slave_clock.sync_status = BOTH;
+				else slave_clock.sync_status = GREEN;
+			}
+			
+			sec = (ntpTimeServer_buf[40]<<24) + (ntpTimeServer_buf[41]<<16) + (ntpTimeServer_buf[42]<<8) + ntpTimeServer_buf[43] ;
+			Server_time = sec - seventyYears;
+			//Neu thoi gian Server ko tin cay!
+			if(Server_time < built_time) return 0;
+			SecondOffset = 	Server_time - timenow;		
+			//Sai khac qua 1s
+			if((SecondOffset > 1 ) || (SecondOffset < -1))
+			{	
+				//printf("Sai lech nhieu %d s\r\n",SecondOffset);	
+				#ifdef OverTheAir
+						send_debug_message = 1;
+						mysize = sprintf(udp_message,"Sai lech nhieu %d s, now %d\r\n",SecondOffset,timenow);
+				#endif		
+				
+				if(slave_clock.rs458_connection == NO_CONNECTION)
+				{
+						sycn_RTC_Now(Server_time);
+																		
+					return 1;
+				}							
+			}
+			
+			//Tinh toan phan le cua giay nhan dc
+			micros_transmit = (ntpTimeServer_buf[44]<<24) + (ntpTimeServer_buf[45]<<16) + (ntpTimeServer_buf[46]<<8) + ntpTimeServer_buf[47] ;
+			sec_frac = micros_transmit / usShift;
+			sec_frac = sec_frac - 1;
+			sec_frac = sec_frac / 100;
+			
+			//Neu sai lech <= 1s
+			timeinfo = localtime( &Server_time );
+			asctime(timeinfo);
+			server_day    = timeinfo->tm_mday;
+			server_month  = timeinfo->tm_mon +1;
+			server_year   = timeinfo->tm_year-100;
+			server_hour   = timeinfo->tm_hour;
+			server_minute = timeinfo->tm_min;
+			server_second = timeinfo->tm_sec;
+			
+			offset = 10000*(server_second - seconds) + ((int)sec_frac - fractionOfSecond) + (loop_delay)/2;
+			
+			#ifdef NTP_CLIENT_DEBUG
+			printf("Tre thoi gian giua server - device: %d ms\r\n",offset/10);
+			#endif
+			
+			//Neu offset <99.9ms thi thoi luon cho nhanh!
+			if(((offset < 999) && (offset >= 0)) || ((offset > -999) && (offset < 0)))
+			{
+				avg_offset_stable = offset;
+				TimeServerStable = 0;
+				avg_offset = 0;
+				
+				#ifdef NTP_CLIENT_DEBUG
+				printf("Gio chuan, offset :%d ms\r\n",offset/10);
+				#endif
+				
+				#ifdef OverTheAir
+				send_debug_message = 1;
+				mysize = sprintf(udp_message,"Gio chuan, offset :%d ms\r\n",offset/10);
+				#endif
+				
+				NTP_alreadySentTimeOut = 19;
+				return 1;
+			}
+			deltaOffset = offset - lastOffset;
+			//Do sai lech offset/last offset < 100ms => tin hieu co ve on dinh => dong bo
+			//if( ((offset >= lastOffset) && (deltaOffset <= 999))  || ((offset < lastOffset) && ((lastOffset - offset) <= 999)) )
+			if((deltaOffset<999) || (deltaOffset>-999) )
+			{
+				//printf("offset > lastOffset %d\r\n",offset- lastOffset);
+				TimeServerStable++;
+				avg_offset = avg_offset + offset;
+			}
+			else 
+			{
+				#ifdef NTP_CLIENT_DEBUG
+				printf("Unstable offset > lastOffset %d\r\n",offset- lastOffset);
+				#endif
+				
+				#ifdef OverTheAir
+				send_debug_message = 1;
+				mysize = sprintf(udp_message,"Unstable offset: %d ms\r\n",deltaOffset/10);
+				#endif
+				
+				TimeServerStable = 0;
+				avg_offset = 0;
+			}
+					
+			lastOffset = offset;
+			
+			if(TimeServerStable > HeSoOnDinh)
+			{
+				avg_offset_stable = avg_offset/TimeServerStable;
+				
+				#ifdef NTP_CLIENT_DEBUG			
+				//printf("Time server on dinh! AVG: %d ms\r\n",avg_offset_stable/10);//Chinh gio thoi
+				#endif
+				#ifdef OverTheAir
+				send_debug_message = 1;
+				mysize = sprintf(udp_message,"Time server stable %d!sum offset %d ms Big offset AVG: %d ms \r\n",TimeServerStable,avg_offset/10,avg_offset_stable/10);
+				#endif
+			  TimeServerStable = 0;
+				avg_offset = 0;
+			}
+			else //dang kiem tra do on dinh cua Time server
+			{
+				
+				return 0;// chua lam gi ca
+			}
+			
+			//Bat dau chinh gio neu ko co RS485
+			if(slave_clock.rs458_connection == NO_CONNECTION)
+			{
+				if(avg_offset_stable>=0)// Dong ho bi cham
+					{
+								
+								//printf("Slower clock! Loop delay %d, avg offset :%d\r\n",loop_delay,avg_offset_stable);	
+						 sycn_RTC_slow(Server_time);
+					}
+					else if(avg_offset_stable<0)//Dong ho nhanh
+					{
+						
+							sycn_RTC_fast(Server_time);
+							//printf("faster clock! Loop delay %d, avg offset :%d\r\n",loop_delay,avg_offset_stable);	
+
+					}
+			}
+			
+			
+			//printf("Loop delay %d, offset :%d\r\n",loop_delay,offset);	
+							
+			//synchronizePeriod = 16;
+			//synchronized_ntp = 1;
+			//NTP_alreadySent  = 0;
 			return 1;
 		}
 		
 		if(	NTP_alreadySent == 0)
 			{
-				sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
-				printf("NTP sent\r\n");	
+				ret = sendto(SOCK_SNTP,ntpmessage,48,ntpTimeServer_ip,123);
+				
+				counterOf10Second = 0;
+				countOfNTPrequest++;
+				
 				NTP_alreadySent = 1;
-				NTP_alreadySentTimeOut = 6;
+				NTP_alreadySentTimeOut = 5;
+				
+				#ifdef NTP_CLIENT_DEBUG
+				//Neu socket timeout thi se bi treo 2s!!!!
+				if(ret == 48) 							printf("Sent ok\r\n");
+				if(ret == SOCKERR_TIMEOUT)	printf("Socket timeout\r\n");
+				printf("NTP_alreadySent, %d\r\n",ret);
+				#endif	
 				return 0;
 			}
 			
@@ -277,92 +404,16 @@ int8_t SNTP_run2(void)
 		break;
 	case SOCK_CLOSED:
 		if((ret=socket(SOCK_SNTP,Sn_MR_UDP,sntp_port,0x00)) != SOCK_SNTP) return ret;
+		#ifdef NTP_CLIENT_DEBUG	
 		printf(" Socket[%d] UDP Socket for SNTP client started at port [%d]\r\n", SOCK_SNTP, sntp_port);
-		break;
+		#endif	
+	break;
 	}
 	// Return value
 	// 0 - failed / 1 - success
 	return 0;
 }
-/**
-Tinh toan phan le cua giay( fraction Of Second) : https://en.wikipedia.org/wiki/Network_Time_Protocol
-- Coi t1 = t2 : thoi gian xu ly cua server rat nhanh va sap xi 0s
-- Coi thoi gian truyen Client to Server va Server ve Client la bang nhau
-=> tre duong truyen round-trip delay / 2
-#ifdef			ntpClientDebug
-			#endif
-*/
-int8_t SNTP_run(void)//datetime sntp;
-{
-	uint32_t ret;
-	uint16_t size;
-	uint32_t destip = 0;
-	uint16_t destport;
-	//uint16_t startindex = 40; //last 8-byte of data_buf[size is 48 byte] is xmt, so the startindex should be 40
-	int8_t i;
-	
-	if (sycnPeriod >= 61) // dong bo lai thoi gian
-	{
-		//printf("TimeIsSet = 0\r\n");
-		TimeIsSet = 0;
-		sycnPeriod = 0;
-		RetrySend = 19;
-	}
-	if(TimeIsSet == 1) return 1;
-	
-	switch(getSn_SR(SOCK_SNTP))
-	{
-	case SOCK_UDP:
-		if ((size = getSn_RX_RSR(SOCK_SNTP)) > 0)
-		{
-			//printf("\r\nsize:%d, ret:%d, NTP: ",size,ret);
-			//if (size > 56) size = 56;	// if Rx data size is lager than TX_RX_MAX_BUF_SIZE
-			recvfrom(SOCK_SNTP, ntpTimeServer_buf, 56, (uint8_t *)&destip, &destport);
-			if(procesingNTPmessage() == 0) 
-			{
-				close(SOCK_SNTP);
-				//printf("Closed SOCK NTP1");
-				NTP_busy = 0;
-				return 0;
-			}
-			
-			NTP_busy = 0;
-			close(SOCK_SNTP);
-			//printf("Closed SOCK NTP\r\n");
-			return 1;
-		}
-		
-		if(NTP_busy ==1)
-		{
-			if(timenow -t0 > 10)
-			{
-				printf("ko nhan dc ban tin NTP\r\n");
-				NTP_busy = 0;
-				return 0;
-			}
-		}
-				if(TimeIsSet == 0) //chua chinh gio
-			{
-				if(RetrySend > 19) //Try Again gui ban tin hoi gio
-				{
-					RetrySend = 0;
-					sendNTPpacket();		
-				}
-				return 0;
-			}
-			
-			
-		
-		break;
-	case SOCK_CLOSED:
-		if((ret=socket(SOCK_SNTP,Sn_MR_UDP,sntp_port,0x00)) != SOCK_SNTP) return ret;
-		printf(" Socket[%d] UDP Socket for SNTP client started at port [%d]\r\n", SOCK_SNTP, sntp_port);
-		break;
-	}
-	// Return value
-	// 0 - failed / 1 - success
-	return 0;
-}
+
 
 
 

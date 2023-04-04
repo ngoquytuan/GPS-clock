@@ -89,7 +89,7 @@ Tra Ve      :   Khong.
 	LCD_SendCommand( 0x28 );         // giao thuc 4 bit, hien thi 2 hang, ki tu 5x8
 	LCD_SendCommand( 0x0c);          // cho phep hien thi man hinh
 	LCD_SendCommand( 0x06 );         // tang ID, khong dich khung hinh
-	LCD_Clear();                     // xoa toan bo khung hinh
+	//minhLCD_Clear();                     // xoa toan bo khung hinh
 	LCD_on;
 }
  /*******************************************************************************

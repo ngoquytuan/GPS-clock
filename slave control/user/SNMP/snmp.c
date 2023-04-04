@@ -4,10 +4,9 @@
 #include <ctype.h>
 #include <stdarg.h>     
 #include <time.h>
-
+#include "mydefines.h"
 #include "socket.h"
 #include "snmp.h"
-//#include "snmp_custom.h"
 #include "socketdefines.h"
 //#define SOCK_agent			 3
 
@@ -37,6 +36,7 @@ int32_t parseSNMPMessage(void);
 
 uint32_t countOfSNMPrequest = 0;
 extern uint32_t countOfNTPrequest;
+uint32_t countOfNTP_Rec = 0;
 extern uint32_t countOfMasterMessages;	
 // Debugging function
 #ifdef _SNMP_DEBUG_
@@ -45,31 +45,24 @@ void dumpCode(uint8_t* header, uint8_t* tail, uint8_t *buff, int32_t len);
 /********************************************************************************************/
 /* SNMP : My code                                                            */
 /********************************************************************************************/
-extern uint8_t gps1_stt;
-extern uint8_t gps2_stt;
-extern uint8_t power1_stt;
-extern uint8_t power2_stt;
-extern int8_t lostSignal;
+uint8_t gps1_stt   = 0;
+uint8_t gps2_stt   = 0;
+uint8_t power1_stt = 0;
+uint8_t power2_stt = 0;
+
+int8_t lostSignal = LOST_RS485_GPS_MASTER;
 extern time_t timenow;
 extern time_t built_time;
 extern struct tm* timeinfo;
 
+extern int32_t avg_offset_stable;//Gia tri sai lech on dinh
+extern uint32_t delta_RS485;
 void get_gpsStatus_all(void *ptr, uint8_t *len);
-//void currentUptime(void *ptr, uint8_t *len)
-//	{}
-//void setMyValue(int value)	//snmpset -v 1 -c public 192.168.1.246 .1.3.6.1.4.1.6.1.2 i 123456
-//{
-//	printf("Got my value :%d\r\n",value);
-//}
-/*
-void getMyValue()						//snmpget -v 1 -c public 192.168.1.246 .1.3.6.1.4.1.6.1.2
-{
-	printf("getMyValue\r\n");
-	//return 301188;
-}*/
+
 
 void get_GPS_stt(void *ptr, uint8_t *len);
 void get_POWER_stt(void *ptr, uint8_t *len);
+
 void get_GPS_stt(void *ptr, uint8_t *len)
 {
 	*len = sprintf((char *)ptr, "GPS1: [%s]; GPS2: [%s]", gps1_stt?"ON":"OFF", gps2_stt?"ON":"OFF");
@@ -80,14 +73,13 @@ void get_POWER_stt(void *ptr, uint8_t *len)
 	*len = sprintf((char *)ptr, "POWER1: [%s]; POWER2: [%s]", power1_stt?"ON":"OFF", power2_stt?"ON":"OFF");
 }
 
-void get_gpsmaster_stt(void *ptr, uint8_t *len)
-{
-	*len = sprintf((char *)ptr, "GPS master status: %s", lostSignal?"OK":"LOST SIGNAL");
-}
+//void get_gpsmaster_stt(void *ptr, uint8_t *len)
+//{
+//	*len = sprintf((char *)ptr, "GPS master status: %s", lostSignal?"OK":"LOST SIGNAL");
+//}
 void get_gpsmaster_time(void *ptr, uint8_t *len)
 {
 	timeinfo = localtime( &timenow );
-	//printf("Current local time and date: %s\r\n", asctime(timeinfo));
 	*len = sprintf((char *)ptr, "Current time: %s", asctime(timeinfo));
 }
 void get_build_time(void *ptr, uint8_t *len)
@@ -97,15 +89,33 @@ void get_build_time(void *ptr, uint8_t *len)
 }
 void get_ntp_snmp_services(void *ptr, uint8_t *len)
 {
-	*len = sprintf((char *)ptr, "Request time: NTP= %d;SNMP= %d;RS485= %d;",countOfNTPrequest, countOfSNMPrequest, countOfMasterMessages);
+	*len = sprintf((char *)ptr, "Request time: NTP= %d / %d;SNMP= %d;RS485= %d;",countOfNTPrequest,countOfNTP_Rec, countOfSNMPrequest, countOfMasterMessages);
+}
+void stabeAvgOffsetNTP(void *ptr, uint8_t *len)
+{
+	*len = sprintf((char *)ptr, "Stable avg Offset NTP %d ms;RS485 %d ms",avg_offset_stable/10,delta_RS485/10);
 }
 dataEntryType snmpData[] =
 {
     // System MIB
 	// SysDescr Entry
+	#ifdef SLAVE_CONSOLE
 	{8, {0x2b, 6, 1, 2, 1, 1, 1, 0},
-	SNMPDTYPE_OCTET_STRING, 30, {"GPS clock time system 2022, Slave clock"},
+	SNMPDTYPE_OCTET_STRING, 30, {"Slave console clock, GPS clock time system 2022"},
 	NULL, NULL},
+	#endif
+	#ifdef SLAVE_WALL
+	{8, {0x2b, 6, 1, 2, 1, 1, 1, 0},
+	SNMPDTYPE_OCTET_STRING, 30, {"Slave wallclock, GPS clock time system 2022"},
+	NULL, NULL},
+	#endif
+
+	#ifdef SLAVE_MATRIX
+	{8, {0x2b, 6, 1, 2, 1, 1, 1, 0},
+	SNMPDTYPE_OCTET_STRING, 30, {"Slave matrix clock, GPS clock time system 2022"},
+	NULL, NULL},
+	#endif
+	
 
 	// SysObjectID Entry
 	{8, {0x2b, 6, 1, 2, 1, 1, 2, 0},
@@ -143,7 +153,7 @@ dataEntryType snmpData[] =
 	get_POWER_stt, NULL},
 	{8, {0x2b, 6, 1, 4, 1, 6, 1, 2},
 	SNMPDTYPE_OCTET_STRING, 40, {""},
-	get_gpsmaster_stt, NULL},
+	stabeAvgOffsetNTP, NULL},
   {8, {0x2b, 6, 1, 4, 1, 6, 1, 3},
 	SNMPDTYPE_OCTET_STRING, 40, {""},
 	get_gpsmaster_time, NULL},
@@ -255,24 +265,6 @@ void snmpd_init(uint8_t * managerIP, uint8_t * agentIP, uint8_t sn_agent, uint8_
     
     //initial_Trap(managerIP, agentIP);
 
-/*
-    // Example Codes for SNMP Trap
-    {
-		dataEntryType enterprise_oid = {0x0a, {0x2b, 0x06, 0x01, 0x04, 0x01, 0x81, 0x9b, 0x19, 0x01, 0x00},
-    	    									SNMPDTYPE_OBJ_ID, 0x0a, {"\x2b\x06\x01\x04\x01\x81\x9b\x19\x10\x00"},	NULL, NULL};
-
-		dataEntryType trap_oid1 = {8, {0x2b, 6, 1, 4, 1, 0, 11, 0}, SNMPDTYPE_OCTET_STRING, 30, {""}, NULL, NULL};
-		dataEntryType trap_oid2 = {8, {0x2b, 6, 1, 4, 1, 0, 12, 0}, SNMPDTYPE_INTEGER, 4, {""}, NULL, NULL};
-
-		strcpy((char *)trap_oid1.u.octetstring, "Alert!!!"); 	// String added
-		trap_oid2.u.intval = 123456;	// Integer value added
-
-		// Generic Trap: warmStart
-		snmp_sendTrap((void *)"192.168.0.214", (void *)"192.168.0.112", (void *)"public", enterprise_oid, SNMPTRAP_WARMSTART, 0, 0);
-
-		// Enterprise-Specific Trap
-		snmp_sendTrap((void *)"192.168.0.214", (void *)"192.168.0.112", (void *)"public", enterprise_oid, 6, 0, 2, &trap_oid1, &trap_oid2);
-	}*/
 
 }
 
@@ -1033,119 +1025,5 @@ int32_t snmp_sendTrap(uint8_t * managerIP, uint8_t * agentIP, int8_t* community,
 	}
 }
 
-#ifdef _SNMP_DEBUG_
-void dumpCode(uint8_t* header, uint8_t* tail, uint8_t *buff, int32_t len)
-{
-	int i;
 
-	printf((char const*)header);
-
-	for (i=0; i<len; i++)
-	{
-		if ( i%16==0 )	printf("0x%04x : ", i);
-		printf("%02x ",buff[i]);
-
-		if ( i%16-15==0 )
-		{
-			int j;
-			printf("  ");
-			for (j=i-15; j<=i; j++)
-			{
-				if ( isprint(buff[j]) )	printf("%c", buff[j]);
-				else					printf(".");
-			}
-			printf("\r\n");
-		}
-	}
-
-	if ( i%16!=0 )
-	{
-		int j;
-		int spaces=(len-i+16-i%16)*3+2;
-		for (j=0; j<spaces; j++) 	printf(" ");
-		for (j=i-i%16; j<len; j++)
-		{
-			if ( isprint(buff[j]) )	printf("%c", buff[j]);
-			else					printf(".");
-		}
-	}
-	printf((char const*)tail);
-}
-#endif
-
-/**
-int32_t snmpd_run(void)
-{
-  int32_t ret;
-	int32_t len = 0;
-  //uint8_t a[4] = {192,168,22,164};  
-	uint8_t svr_addr[6];
-	uint16_t  svr_port;
-
-	if(SOCK_SNMP_AGENT > _WIZCHIP_SOCK_NUM_) return -99;
-    
-	switch(getSn_SR(SOCK_SNMP_AGENT))
-	{
-		case SOCK_UDP :
-			if ( (len = getSn_RX_RSR(SOCK_SNMP_AGENT)) > 0)
-			{
-				request_msg.len= recvfrom(SOCK_SNMP_AGENT, request_msg.buffer, len, svr_addr, &svr_port);
-			}
-			else
-			{
-				request_msg.len = 0;
-			}
-
-			if (request_msg.len > 0)
-			{
-#ifdef _SNMP_DEBUG_
-				dumpCode((void *)"\r\n[Request]\r\n", (void *)"\r\n", request_msg.buffer, request_msg.len);
-#endif
-				// Initialize
-				request_msg.index = 0;
-				response_msg.index = 0;
-				errorStatus = errorIndex = 0;
-				memset(response_msg.buffer, 0x00, MAX_SNMPMSG_LEN);
-
-				// Received message parsing and send response process
-				if (parseSNMPMessage() != -1)
-				{
-					ret = sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
-					
-					//printf("sent \r\n");
-					if(ret < 0)
-               {
-                  //printf("S %d: sendto error. %d\r\n",SOCK_SNMP_AGENT,ret);
-                  return ret;
-               }
-				}
-
-#ifdef _SNMP_DEBUG_
-				
-				printf("S %d: sendto %d.%d.%d.%d port %d\r\n",SOCK_SNMP_AGENT,svr_addr[0],svr_addr[1],svr_addr[2],svr_addr[3],svr_port);
-				dumpCode((void *)"\r\n[Response]\r\n", (void *)"\r\n", response_msg.buffer, response_msg.index);
-				sendto(SOCK_SNMP_AGENT, response_msg.buffer, response_msg.index, svr_addr, svr_port);
-				sendto(4,response_msg.buffer, response_msg.index, svr_addr, svr_port);
-				//sendto(SOCK_UDPS,serverPacket,NTP_PACKET_SIZE,destip,destport);
-				printf("sent \r\n");
-#endif
-			}
-			break;
-
-		case SOCK_CLOSED :
-			if((ret = socket(SOCK_SNMP_AGENT, Sn_MR_UDP, PORT_SNMP_AGENT, 0x00)) != SOCK_SNMP_AGENT)
-				return ret;
-#ifdef _SNMP_DEBUG_
-			printf(" Socket[%d] UDP Socket for SNMP Agent, port [%d]\r\n", SOCK_SNMP_AGENT, PORT_SNMP_AGENT);
-#endif
-			break;
-
-		default :
-			break;
-	}
-
-
-	return 1;
-}
-*/
 

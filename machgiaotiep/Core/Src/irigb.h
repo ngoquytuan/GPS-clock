@@ -1,8 +1,6 @@
 //#include "stm32g4xx_hal.h"
 #include <stdint.h>
 
-
-
 unsigned char irigb_code[100]={	2,	0,	0,	0,	0,	0,	0,	0,	0,	2,//Second
 								0,	0,	0,	0,	0,	0,	0,	0,	0,	2,//Minite
 								0,	0,	0,	0,	0,	0,	0,	0,	0,	2,//Hour
