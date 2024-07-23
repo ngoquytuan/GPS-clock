@@ -218,11 +218,38 @@ int32_t NTPUDP(uint8_t socket_number)
          }
          break;
       case SOCK_CLOSED:
-				 
-         if((ret=socket(socket_number,Sn_MR_UDP,NTP_PORT,0x00)) != socket_number)
-            return ret;
-         printf(" Socket[%d] UDP Socket for NTP Time Server started, port [%d]\r\n", socket_number, NTP_PORT);
+			{
+				int retry_count = 0;
+				 int max_retries = 3; // try max time
+				while(retry_count < max_retries) {
+					ret = socket(socket_number, Sn_MR_UDP, NTP_PORT, 0x00);
+					if(ret == socket_number) {
+					#ifdef NTP_CLIENT_DEBUG	
+					printf(" Socket[%d] UDP Socket for NTP Time Server started at port [%d]\r\n", socket_number, NTP_PORT);
+					#endif
+					break; // 
+					}
+					else {
+						#ifdef NTP_CLIENT_DEBUG	
+						printf(" Failed to create socket[%d], retrying... (%d/%d)\n", socket_number, retry_count+1, max_retries);
+						#endif
+						retry_count++;
+						HAL_Delay(10);						
+					}
+					
+				}
+				if(retry_count == max_retries) {
+				#ifdef NTP_CLIENT_DEBUG	
+				printf(" Failed to create socket after %d retries, returning error %d\n", max_retries, ret);
+				#endif
+				return ret; 
+				}
+         //if((ret=socket(socket_number,Sn_MR_UDP,NTP_PORT,0x00)) != socket_number)
+          //  return ret;
+         //printf(" Socket[%d] UDP Socket for NTP Time Server started, port [%d]\r\n", socket_number, NTP_PORT);
          break;
+			}
+				 
       default : //NVIC_SystemReset();
          break;
    }
